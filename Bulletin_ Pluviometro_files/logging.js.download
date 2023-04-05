@@ -1,0 +1,25 @@
+/**
+ * Utility functions for logging to console
+ * 
+ */
+
+/**
+ * Create a logging function that will always print a string at the beginning
+ * example:
+ *   var log = LogFactory("ajax module:");
+ *   log("error!"); // output to console: ajax module: error!
+ * @param sPrefix The string to be printed at the beginning of all your logs
+ * @returns {Function}
+ * @TODO add hooks for a window.debug fallback on old IE
+ * @author Nicholas Funnell <nickf@davisnet.com>
+ * @since 2014-10-16
+ */
+function LogFactory(sPrefix) {
+	if (!console || !console.log) {
+		return function () {};
+	}
+	return function () {
+		var args = Array.prototype.slice.call(arguments, 0);
+		args.unshift(sPrefix);
+	};
+}

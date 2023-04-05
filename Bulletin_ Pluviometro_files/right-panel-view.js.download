@@ -1,0 +1,248 @@
+/**
+ * Created by anton.milko on 4/14/16.
+ */
+
+var wl = wl || {};
+wl.davis = wl.davis || {};
+wl.davis.views = wl.davis.views || {};
+
+wl.davis.views.RightPanelView = Marionette.LayoutView.extend({
+    template: wl.shared.tpl['right-panel'],
+    className: 'right-panel-i',
+    regions: {
+        sensors: '.sensor-list',
+        devices: '.devices-list',
+        account: '.account-list',
+        userInfo: '.user-info'
+    },
+    ui: {
+        devicesIcon: '#icon-wrench',
+        devicesList: '.devices-list',
+        sensorsIcon: '#icon-stations',
+        sensorList: '.sensor-list',
+        accountIcon: '#icon-account',
+        accountList: '.account-list',
+        optionsPanel: '.right-panel-options'
+    },
+    events: {
+        "click @ui.devicesIcon": "showDevices",
+        "click @ui.sensorsIcon": "showStations",
+        "click @ui.accountIcon": "showAccount"
+    },
+    initialize: function () {
+        this.promises = this.getTranslation(this.getTranslationKeys());
+        var self = this;
+        if (!this.model) {
+            this.model = new Backbone.Model;
+        }
+
+        var permission, gatewayTypeAbbrev;
+        var deviceTier = wl.__bootstrap_device_subscription_tier || 1;
+        var canAccessDeviceConfig = wl.__canAccessDeviceConfig;
+        if (wl.__bootstrap_user_info) {
+            permission = "shared";
+            if (!wl.__bootstrap_is_guest && (wl.__bootstrap_user_info.iUserId === wl.__bootstrap_system_info.userId)) {
+                permission = "owner";
+            }
+        }
+
+        if (wl.__bootstrap_system_info) {
+            gatewayTypeAbbrev = wl.__bootstrap_system_info.gatewayTypeAbbrev;
+        }
+
+        this.model.set('gatewayTypeAbbrev', gatewayTypeAbbrev);
+        this.model.set('permission', permission);
+        this.model.set('isGuest', wl.__bootstrap_is_guest);
+        this.model.set('deviceTier', deviceTier);
+        this.model.set('canAccessDeviceConfig', canAccessDeviceConfig);
+        $(window).resize(function () {
+            self.setDropdownMaxHeight();
+        });
+    },
+    onBeforeShow: function () {
+        var AccountListView = wl.davis.views.AccountListView;
+        var UserInfoView = wl.davis.views.UserInfoView;
+        this.showChildView('account', new AccountListView());
+        if (this.model.get('isGuest') == false) {
+            this.showChildView('userInfo', new UserInfoView());
+        }
+        Promise.all(this.promises).then(function () {
+            this.getDevicesList();
+            this.getFavoriteAndShare();
+            this.getStationTier();
+        }.bind(this));
+
+
+    },
+    onRender: function () {
+        this.showPredefinedRegion();
+        this.setDropdownMaxHeight();
+        this.initWoodSmoke();
+    },
+    onShow: function () {
+        if (wl.__bootstrap_is_guest) {
+            var sidebarHelperHeight = 'calc(100% - ' + '0px)';
+            $('.sidebar-helper-1').css({ 'height': sidebarHelperHeight, 'top': '0px' });
+        }
+    }
+    ,
+    getTranslationKeys: function () {
+        return [
+            'upgrade_tier_heading',
+            'upgrade_tier_desc_1',
+            'upgrade_tier_desc_2',
+            'upgrade_tier_desc_3',
+            'find_out_more',
+            'upgrades_used',
+            'upgrade_this_device',
+            'need_more_upgrades',
+            'currently_upgraded_device',
+            'owned_by',
+            'shared_by',
+            'downgrade',
+            'owned',
+            'favorites',
+            'shared',
+            'device_tier'
+        ];
+    },
+    getTranslation: function (translationKeys) {
+        var promises = [];
+        var translations = [];
+        _.each(translationKeys, function (key) {
+            var prom = document.l10n.formatValue(key);
+            promises.push(prom);
+            prom.then(function (result) {
+                translations[key] = result;
+            });
+        });
+        return promises;
+    },
+    'showDevices': function () {
+        if (wl.data.identifier) {
+            window.location.href = "/manageDevices/enviroMonitorConfiguration/" + wl.data.identifier;
+        } else if (window.location.href.indexOf('account') > 0 && wl.bootstrap && wl.bootstrap.lastViewedSystemId) {
+            window.location.href = "/manageDevices/enviroMonitorConfiguration/" + wl.bootstrap.lastViewedSystemId;
+        } else {
+            this.$el.find('.sidebar-helper-2').children().hide();
+            this.ui.optionsPanel.children().removeClass('active');
+            this.ui.devicesIcon.addClass('active');
+            if (!wl.__bootstrap_is_guest) {
+                this.$el.find(this.ui.devicesList).show();
+            }
+        }
+    },
+    'showStations': function () {
+        this.$el.find('.sidebar-helper-2').children().hide();
+        this.ui.optionsPanel.children().removeClass('active');
+        this.ui.sensorsIcon.addClass('active');
+        this.$el.find(this.ui.sensorList).show();
+    },
+    'showAccount': function () {
+        if (window.location.href.indexOf('account') == -1) {
+            window.location.href = "/account";
+        } else {
+            this.$el.find('.sidebar-helper-2').children().hide();
+            this.ui.optionsPanel.children().removeClass('active');
+            this.ui.accountIcon.addClass('active');
+            this.$el.find(this.ui.accountList).show();
+        }
+    },
+    'navigateBack': function (e) {
+        e.preventDefault();
+        window.location.href = Navbar.getLastViewedPageLink(wl.bootstrap.lastViewedPageUrl, wl.bootstrap.lastViewedSystemId);
+    },
+    showPredefinedRegion: function () {
+        if (this.options.devicesPage == true) {
+            this.showDevices();
+            this.applyOverlay();
+        } else if (this.options.accountPage == true) {
+            this.showAccount();
+            this.applyOverlay();
+        } else {
+            this.showStations();
+        }
+    },
+    applyOverlay: function () {
+        $('.navbar-left ul').addClass('quarter-opacity').append('<div id="panel-overlay"></div>');
+        $('.navbar-search-box').addClass('quarter-opacity').append('<div id="panel-overlay" class="overlay-right"></div>');
+    },
+    getFavoriteAndShare: function () {
+        var favoriteShareEl = $('.station-options');
+        if (favoriteShareEl.length) {
+            var favoriteShareRegion = Marionette.Region.extend({
+                el: favoriteShareEl
+            });
+
+            this.addRegions({
+                favoriteShareRegion: favoriteShareRegion
+            });
+
+            var favoriteShareView = new wl.app.MyDevicesList.FavoriteAndShareView();
+            this.showChildView('favoriteShareRegion', favoriteShareView);
+        }
+    },
+    getDevicesList: function () {
+        var stationDropdownEl = $('#page-contents .devices-dropdown .dropdown-menu');
+        if (stationDropdownEl.length) {
+            var stationDropdownRegion = Marionette.Region.extend({
+                el: stationDropdownEl
+            });
+
+            this.addRegions({
+                stationDropdownRegion: stationDropdownRegion
+            });
+
+            //devices dropdown list
+            this.showChildView('stationDropdownRegion', new wl.app.MyDevicesList.DevicesDropdownLayoutView());
+        }
+
+        //sidebar devices list
+        var devicesListView = new wl.app.MyDevicesList.ListItemCompositeView();
+        this.getRegion('devices').show(devicesListView);
+    },
+    getStationTier: function () {
+        var stationTierEl = $('.station-tier');
+        if (stationTierEl.length) {
+            var stationTierRegion = Marionette.Region.extend({
+                el: stationTierEl
+            });
+
+            this.addRegions({
+                stationTierRegion: stationTierRegion
+            });
+
+            var stationTierView = new wl.app.MyDevicesList.StationTierView();
+            this.showChildView('stationTierRegion', stationTierView);
+        }
+    },
+    setDropdownMaxHeight: function () {
+        var dropdownToggle = $('.left-panel-options .dropdown-toggle').get(0);
+        if (!dropdownToggle) {
+            return;
+        }
+        var viewsListTop = dropdownToggle.getBoundingClientRect().bottom;
+        var windowHeight = $(window).height();
+        var maxHeight = windowHeight - viewsListTop - 5;
+        $('.left-panel-options .dropdown-menu').css('max-height', maxHeight + 'px');
+    },
+    initWoodSmoke: function () {
+        var $checkbox = $('.wood-smoke-option input');
+        var $loading = $('.wood-smoke-option .loading');
+        $checkbox.prop('checked', wl.__isAqsWoodSmokeEnabled);
+        $checkbox.on('change', function (e) {
+            var $target = $(e.target);
+            $target.attr('disabled', true);
+            $loading.show();
+            $.get('/device/setWoodSmokeEnabled/' + wl.data.systemId + '/'
+                + $target.prop('checked'), function (res) {
+                    if (res.data) {
+                        window.location.reload();
+                    } else {
+                        $(e.target).removeAttr('disabled');
+                        $loading.hide();
+                    }
+                })
+        })
+    }
+});

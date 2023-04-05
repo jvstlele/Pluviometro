@@ -1,0 +1,159 @@
+/**
+ * Ajax module for Bulletin App
+ * It will download new data for a station every X seconds
+ * It will send portlet config settings to the server for persistence
+ *
+ * @author Nicholas Funnell <nickf@davisnet.com>
+ * @since 2014-10-13
+ */
+
+wl.app.module("Ajax", function (oModule, oApp) {
+
+    // Private Vars
+    // ============
+
+    var _sUrlPrefix = '';
+    var log = LogFactory("AJAX:");
+    var _iRefreshRate = 60 * 1000;
+
+    if ($.QueryString['force_random']) {
+        _iRefreshRate = 2500;
+    }
+
+    // Initializers
+    // ============
+    oModule.addInitializer(function () {
+        log("INIT");
+        // build the string we will use
+        _sUrlPrefix = '/bulletin';
+        if (_iRefreshRate > 0) {
+            _beginPolling();
+        }
+    });
+
+    // Private Functions
+    // =================
+
+    function rand(min, max) {
+        if (max < min) {
+            return rand(max, min);
+        }
+        return min + Math.floor((max - min) * Math.random());
+    }
+
+    function _savePositions(aList) {
+        if (wl.data.user.id === -1) {
+            log("Did not save positions, user is ANONYMOUS");
+            return;
+        } else if (aList.length === 0) {
+            log("Did not save positions, no tiles");
+            return;
+        }
+
+        $.ajax(_sUrlPrefix + '/positions', {
+            type: 'POST',
+            complete: function () {
+                log("I have saved the portlet positions", aList);
+            },
+            data: {
+                positions: aList
+            }
+        });
+    }
+
+    function _beginPolling() {
+        window.setInterval(_fetchData, _iRefreshRate);
+        log("begin polling: " + (_iRefreshRate / 1000));
+    }
+
+    function _fetchData() {
+        //Get the now time to always fetch.
+        var iMaxTimestamp = Math.floor(Date.now() / 1000);
+
+        var sUrl = _sUrlPrefix + '/data/' + wl.data.identifier;
+        if ($.QueryString['force_random']) {
+            sUrl += '/random';
+        }
+
+        $.ajax(sUrl, {
+            data: {
+                ts: iMaxTimestamp
+            },
+            success: _fetchDataOnSuccess,
+            error: _fetchDataOnError
+        });
+    }
+
+    function _fetchDataOnSuccess(oServerData) {
+        if (oServerData.nodata || (!oServerData.oIssData && !oServerData.oIssHilowData)) {
+            // nothing to do
+            log("Server said there is no new system data");
+            //BUG BUG - should be return if no data
+            //return;
+        }
+        
+        if (oServerData.oBarData) {
+            wl.data.barometerData = oServerData.oBarData;
+        }
+        if (oServerData.oIssData) {
+            wl.data.stationData = oServerData.oIssData;
+        }
+        if (oServerData.oIssHilowData) {
+            wl.data.stationHilow = oServerData.oIssHilowData;
+        }
+        if (oServerData.oMaiaData) {
+            wl.data.maiaSensorData = oServerData.oMaiaData;
+        }
+        if (oServerData.windRoseData) {
+            wl.data.windRoseData = oServerData.windRoseData;
+        }
+        if (oServerData.aqssensorData) {
+            wl.data.aqsSensorData = oServerData.aqssensorData;
+        }
+        if (oServerData.totalETData) {
+          wl.data.totalETData = oServerData.totalETData;
+        }
+        if (oServerData.totalFlowData) {
+          wl.data.totalFlowData = oServerData.totalFlowData;
+        }
+        if (oServerData.totalRainData) {
+          wl.data.totalRainData = oServerData.totalRainData;
+        }
+        oApp.vent.trigger('before:data:refresh');
+        oApp.vent.trigger('data:refresh');
+    }
+
+    function _fetchDataOnError(error) {
+        log("ERROR ERROR", arguments);
+    }
+
+    function _saveWindRoseRange(iRangeId, iLsid) {
+
+        $.ajax({
+            url: _sUrlPrefix + '/saveWindRoseRange/' + wl.data.identifier + '/' + iLsid + '/' + iRangeId,
+            cache: false,
+            success: function (data) {
+                if (data.success) {
+                    _fetchData();
+                }
+            }
+        });
+    }
+
+    // Public Functions
+    // ================
+
+    oModule.savePositions = _savePositions;
+    oModule.refresh = _fetchData;
+    oModule.saveWindRoseRange = _saveWindRoseRange;
+    oModule.numberFormat = function (dData, iPrecision) {
+        if (typeof dData === "number") {
+            var iPow = Math.pow(10, iPrecision);
+            var n = Math.floor(dData * iPow) / (iPow);
+            log("number format", dData, n);
+            return n;
+        }
+        log("not a number: ", dData);
+        return dData;
+    };
+});

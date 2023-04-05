@@ -1,0 +1,175 @@
+/**
+ * main.js
+ * 
+ * Application entrypoint, general config
+ * 
+ * @author Nicholas Funnell <nickf@davisnet.com>
+ * @since 2014-10-13
+ */
+
+window.wl = window.wl || {};
+window.wl.app = new Backbone.Marionette.Application();
+window.wl.data = window.wl.data || {};
+
+wl.app.addRegions({
+    summaryRegion: "#summary",
+    rightPanel: "#right-panel"
+});
+
+wl.app.config = {
+	grid: {
+		/** 
+		 * These settings should be kept in sync with 
+		 * CSS for padding/border/margin and 
+		 * headerHeight/footerHeight
+		 */
+		tileHeight: 240,
+		tileWidth: 240,
+		tilePadding: 2,
+		tileBorder: 0,
+		tileMargin: 2,
+		unitWidth: 240,
+		headerHeight: 25,
+		footerHeight: 25,
+		getContentSize: function (oSize, iWidthUnits, iHeightUnits) {
+			iWidthUnits = Math.min(iWidthUnits, oSize.numColumns);
+			with (wl.app.config.grid) {
+				var oResults = {
+					height: (iHeightUnits * oSize.height) - headerHeight - footerHeight - (2 * (tilePadding + tileBorder + tileMargin)),
+					width: (iWidthUnits * oSize.width) - (2 * (tilePadding + tileBorder + tileMargin))
+				};
+				return oResults;
+			}
+		}
+	}
+};
+
+wl.app.on("all", function () {
+	console.warn("APP EVENT", arguments, new Date());
+});
+wl.app.vent.on("all", function () {
+	console.warn("VENT BROADCAST", arguments, new Date());
+});
+
+//
+//  C O N S U M E   B O O T S T R A P   D A T A
+//
+wl.app.on('before:start', function () {
+	wl.data.system = new wl.models.SystemModel(wl.__bootstrap_system_info);
+	wl.data.systemId = wl.__bootstrap_system_info.systemId;
+	wl.data.system.set('aSensors', _.sortBy(wl.data.system.get('aSensors')));
+	wl.data.isOwner = wl.__bootstrap_is_owner;
+	wl.data.identifier = wl.__bootstrap_device_identifier;
+	wl.data.sDid = wl.__bootstrap_system_info.sDid;
+	wl.data.stationData = wl.__bootstrap_station_data.oIssData;
+	wl.data.stationHilow = wl.__bootstrap_station_data.oIssHilowData;
+	wl.data.maiaSensorData = wl.__bootstrap_station_data.oMaiaData;
+	wl.data.aqsSensorData = wl.__bootstrap_station_data.aqssensorData;
+	wl.data.barometerData = wl.__bootstrap_station_data.oBarData;
+	wl.data.windRoseData = wl.__bootstrap_station_data.windRoseData;
+	wl.data.forecastOverview = wl.__bootstrap_station_data.lsForecastOverview;
+	wl.data.moonPhase = wl.__bootstrap_station_data.moonPhase;
+	wl.data.sunset = wl.__bootstrap_station_data.sunset;
+	wl.data.sunrise = wl.__bootstrap_station_data.sunrise;
+	wl.data.tilePanelData = wl.__bootstrap_tile_panel_data;
+	wl.data.totalRainData = wl.__bootstrap_total_rain;
+	wl.data.totalETData = wl.__bootstrap_total_et;
+	wl.data.totalFlowData = wl.__bootstrap_total_flow;
+    wl.data.userAccountSetting = wl.__bootstrap_user_account_settings;
+	wl.data.portletConfigs = new wl.collections.PortletConfigs(wl.__bootstrap_user_portlet_settings);
+	wl.data.portletTypes = new wl.collections.PortletTypes(wl.__bootstrap_portlet_types);
+	wl.data.user = new wl.models.User(wl.__bootstrap_user_info);
+	// Unit formats
+	//Note: the dgree symbol is not html so that it will work with High Chart
+	wl.data.unitLabelTemperature = " °" + Utils.getAccountTempUnit(wl.__bootstrap_user_account_settings.unitsTempTypeId);
+	wl.data.unitLabelWindSpeed = " " + Utils.getAccountWindUnit(wl.__bootstrap_user_account_settings.unitsWindTypeId);
+	wl.data.unitLabelBarometer = " " + Utils.getAccountBarUnit(wl.__bootstrap_user_account_settings.unitsBarTypeId);
+	wl.data.unitLabelRainEt = " " + Utils.getAccountRainEtUnit(wl.__bootstrap_user_account_settings.unitsRainEtTypeId);
+	wl.data.unitLabelPressure = " " + Utils.getAccountPressureUnit(wl.__bootstrap_user_account_settings.unitsPressureTypeId);
+	wl.data.unitLabelPercent = "%";	
+	wl.data.unitLabelWaterFlow = "";
+	wl.data.unitLabelSolar = "W/m<sup>2</sup>";
+	wl.data.timeFormat = Utils.getFullAccountTimeFormat(wl.__bootstrap_user_account_settings.formatTimeTypeId);
+    wl.data.timezoneOffset = wl.__bootstrap_timezone_offset;
+    wl.data.staleDataBufferSec = wl.__bootstrap_stale_data_buffer_sec;
+    wl.data.outdatedDataBufferSec = wl.__bootstrap_outdated_data_buffer_sec;
+
+    //show inside temp/hum only for owner
+    if (!wl.data.isOwner) {
+        wl.data.portletConfigs.models = _.filter(wl.data.portletConfigs.models, function (model) {
+           return model.get('iPortletTypeId') !== 78;
+        });
+    }
+    
+    // start ads module
+    if (wl.__bootstrap_ads != null) {
+    	wl.app.oBulletinAds.start(wl.__bootstrap_ads);
+    }
+    // SHOW_HIDDEN - Special case portlet, not saved in database, added here
+	// add TYPE
+	wl.data.portletTypes.add({
+		sType: 'show_hidden',
+		iGridWidth: 1,
+		iGridHeight: 1,
+		sDefaultView: 'main',
+		oAvailableViews: {
+			'main': 'show_hidden_main'
+		},
+		aSensors: [],
+		iAvailable: 0 //ks notes: set to 1 to show the show hideen portlet.
+	});
+	// add CONFIG
+	wl.data.portletConfigs.add({
+		iPortletSettingId: wl.constants.showHiddenId,
+		sType: 'show_hidden',
+		sViewName: 'main',
+		iPosition: 999, iGridWidth: 1, iGridHeight: 1,
+		iVisible: 0
+	});
+	// TEMP
+	// WEBCAM
+//	wl.data.portletTypes.add({
+//		sType: 'webcam_img',
+//		iGridWidth: 1,
+//		iGridHeight: 1,
+//		sDefaultView: 'main',
+//		oAvailableViews: {
+//			'main': 'webcam_img_main'
+//		},
+//		aSensors: [],
+//		iAvailable: 1
+//	});
+//	wl.data.portletConfigs.add({
+//		iPortletSettingId: -717,
+//		sType: 'webcam_img',
+//		sViewName: 'main',
+//		iPosition: -4, iGridWidth: 1, iGridHeight: 1,
+//		iVisible: 1
+//	});
+
+
+});
+
+//
+// Document.ready
+//
+// S T A R T
+//
+//var oLang = false;
+$(document).ready(function () {
+	// Setup Languages
+	//var aLocalToMoment = {
+	//	english: 'en',
+	//	spanish: 'es',
+	//	russian: 'ru',
+	//	french: 'fr'
+	//};
+	//moment.locale(aLocalToMoment[wl.__bootstrap_lang]);
+	//oLang = L20n.getContext();
+	//oLang.linkResource('/static/local/' + wl.__bootstrap_lang + '.l20n?nocachepelase=' + wl.NOCACHE);
+	//oLang.addEventListener('ready', function () {
+		// Begin Application
+		wl.app.start();
+	//});
+	//oLang.requestLocales();
+});

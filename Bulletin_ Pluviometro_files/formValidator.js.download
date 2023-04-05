@@ -1,0 +1,2416 @@
+/**
+ * Set Defaults for the validator
+ * Adjust error placement to handle Bootstrap css framework
+ */
+jQuery.validator.setDefaults({
+	onkeyup: false,
+	highlight: function(element) {
+		//$(element).closest(".form-group").addClass("has-error");
+		$(element).parent().addClass("has-error");
+	},
+	unhighlight: function(element) {
+		//$(element).closest('.form-group').removeClass('has-error');
+		$(element).parent().removeClass('has-error');
+	},
+	errorElement: 'span',
+	errorClass: 'help-block',
+	errorPlacement: function(error, element) {
+		if (element.parent('.input-group').length) {
+			error.insertAfter(element.parent());
+		} else {
+			error.insertAfter(element);
+		}
+	}
+});
+
+function formatErrorMessage(message) {
+	return "<span data-l10n-id='".concat(message, "'></span>");
+}
+
+/**
+ * Used mainly for select options when the first option represent no option selected.
+ * An integer value is equal to or less than 0 would be considered no option selected.
+ * A empty string will also be considered no option selected.
+ *
+ * @author   Kenny Sam <kennys@davisnet.com>
+ * @since    Available since 2011-09-02
+ *
+ * @param   <boolean>    Whether to perform the validation.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	'requiredSelect',
+	function(value, element, param) {
+		if (param) {
+			if (jQuery.trim(value) == '' || parseInt(value) <= 0) {
+				//No option was selected.
+				return false
+			}
+		} //if
+		return true;
+	} //function
+); //requiredSelect
+
+/**
+ * Make sure the user input value is less than a value set in another input field.
+ *
+ * @author   Kenny Sam <kennys@davisnet.com>
+ * @since    Available since 2011-09-02
+ *
+ * @param   <string>    The string jquery selector to point to that element.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	'lessThanInputValue',
+	function(value, element, param) {
+		var setValue = parseInt(value);
+		var limitValue = parseInt($(param).val());
+		if (isNaN(limitValue)) {
+			return false;
+		}
+		return setValue < limitValue;
+	}
+); //lessThanInputValue
+
+/**
+ * Make sure the user input value is greater than a value set in another input field.
+ *
+ * @author   Kenny Sam <kennys@davisnet.com>
+ * @since    Available since 2011-09-02
+ *
+ * @param   <string>    The string jquery selector to point to that element.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	'greaterThanInputValue',
+	function(value, element, param) {
+		var setValue = parseInt(value);
+		var limitValue = parseInt($(param).val());
+		if (isNaN(limitValue)) {
+			return false;
+		}
+		return setValue > limitValue;
+	}
+); //greaterThanInputValue
+
+/**
+ * Verify that a password meets all the requirements.
+ * Password must be at least 8 characters and not contain their username
+ *
+ * @param   <string>    A string (usually a username) to verify if it exists in the password.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	'dontAllowUsername',
+	function(value, element, param) {
+		if (value.toLowerCase().indexOf(param.toLowerCase()) >= 0) {
+			//Found username in password
+			return false;
+		} else {
+			return true;
+		}
+	}
+);
+
+/**
+ * Verify that the value is a valid latitude value.e
+ *
+ * @author   Kenny Sam <kennys@davisnet.com>
+ * @since    Available since 2011-09-02
+ *
+ * @param   <boolean>    Whether to perform the validation.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	"latitude",
+	function(value, element, param) {
+		if (param) {
+			return value <= 90 && value >= -90;
+		}
+		return true;
+	} //function
+); //latitude
+
+/**
+ * Verify that the value is a valid longitude value.
+ *
+ * @author   Kenny Sam <kennys@davisnet.com>
+ * @since    Available since 2011-09-02
+ *
+ * @param   <boolean>    Whether to perform the validation.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	"longitude",
+	function(value, element, param) {
+		if (param) {
+			return value <= 180 && value >= -180;
+		}
+		return true;
+	} //function
+); //longitude
+
+/**
+ * Verify that the number of ISS station is a valid.
+ *
+ * @author   Kalin Muskov <kalinm@davisnet.com>
+ * @since    Available since 2012-12-05
+ *
+ * @param   <boolean>    Whether to perform the validation.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	"countISS",
+	function(value, element, param) {
+		var count = 0;
+		for (var i = 1; i < 9; i++) {
+			var elem = $('select[name=iStation' + i + 'Type] option:selected');
+			if (elem.val() == 2) {
+				count++;
+			}
+		}
+		if (count > 1) {
+			return false;
+		}
+		return true;
+	});
+
+/**
+ * Verify that the number of WIND station is a valid.
+ *
+ * @author   Kalin Muskov <kalinm@davisnet.com>
+ * @since    Available since 2012-12-05
+ *
+ * @param   <boolean>    Whether to perform the validation.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	"countWIND",
+	function(value, element, param) {
+		var count = 0;
+		for (var i = 1; i < 9; i++) {
+			var elem = $('select[name=iStation' + i + 'Type] option:selected');
+			if (elem.val() == 5) {
+				count++;
+			}
+		}
+		if (count > 1) {
+			return false;
+		}
+		return true;
+	});
+
+/**
+ * Verify that the number of LEAF station is a valid.
+ *
+ * @author   Kalin Muskov <kalinm@davisnet.com>
+ * @since    Available since 2012-12-05
+ *
+ * @param   <boolean>    Whether to perform the validation.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	"countLEAF",
+	function(value, element, param) {
+		var count = 0;
+		for (var i = 1; i < 9; i++) {
+			var elem = $('select[name=iStation' + i + 'Type] option:selected');
+			if (elem.val() == 6) {
+				count++;
+			}
+		}
+		if (count > 1) {
+			return false;
+		}
+		return true;
+	});
+
+/**
+ * Verify that the number of SOIL station is a valid.
+ *
+ * @author   Kalin Muskov <kalinm@davisnet.com>
+ * @since    Available since 2012-12-05
+ *
+ * @param   <boolean>    Whether to perform the validation.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	"countSOIL",
+	function(value, element, param) {
+		var count = 0;
+		for (var i = 1; i < 9; i++) {
+			var elem = $('select[name=iStation' + i + 'Type] option:selected');
+			if (elem.val() == 7) {
+				count++;
+			}
+		}
+		if (count > 1) {
+			return false;
+		}
+		return true;
+	});
+
+/**
+ * Verify that the number of LEAF/SOIL station is a valid.
+ *
+ * @author   Kalin Muskov <kalinm@davisnet.com>
+ * @since    Available since 2012-12-05
+ *
+ * @param   <boolean>    Whether to perform the validation.
+ *
+ * @return  <boolean>   Whether the value pass the validation.
+ */
+jQuery.validator.addMethod(
+	"countLEAFSOIL",
+	function(value, element, param) {
+		var count = 0;
+		var leaf = 0;
+		var soil = 0;
+
+		for (var i = 1; i < 9; i++) {
+			var elem = $('select[name=iStation' + i + 'Type] option:selected');
+			if (elem.val() == 6) {
+				leaf++;
+			}
+			if (elem.val() == 7) {
+				soil++;
+			}
+			if (elem.val() == 8) {
+				count++;
+			}
+		}
+		if (leaf == 1 || soil == 1) {
+			if (count > 0) {
+				FORM_VALIDATOR.leafSoil = 1;
+				return false;
+			}
+		}
+		if (leaf == 0 && soil == 0) {
+			if (count > 1) {
+				FORM_VALIDATOR.leafSoil = 2;
+				return false;
+			}
+		}
+		return true;
+	});
+
+jQuery.validator.addMethod(
+	"integers",
+	function(value, element, param) {
+		var bRes = false;
+		if (typeof value === 'string' && value.length > 0) {
+			value = parseFloat(value);
+		}
+		if (((typeof value === 'number') && ((value % 1) === 0)) ||
+			(value.length === 0)) {
+			bRes = true;
+		}
+		//console.log("integers ["+value+"] res ["+bRes+"] typeof value ["+(typeof value)+"]");
+		return bRes;
+	});
+
+jQuery.validator.addMethod(
+	"filesize",
+	function(value, element, param) {
+		return this.optional(element) || (element.files && element.files[0] &&
+			element.files[0].size < param);
+	}
+);
+
+jQuery.validator.addMethod(
+	"zerosize",
+	function(value, element, param) {
+		return this.optional(element) || (element.files && element.files[0] &&
+			element.files[0].size > param);
+	}
+);
+
+/**
+ * TODO: synchronous http request is deprecated
+ * find better way to prevent form submit before request resolved
+ */
+
+/**
+ * custom synchronous method to prevent form submit before request resolved
+ * @param value
+ * @param element - current element
+ * @param param - additional params (url, type, linked field name, bProcess)
+ * if bProcess = true perform check every time, even if the field was not changed
+ */
+
+jQuery.validator.addMethod("synchronousRemote", function(value, element, param) {
+	if (this.optional(element)) {
+		return "dependency-mismatch";
+	}
+	var type = "GET";
+	var linkedParam;
+	var bProcess = false;
+
+	var previous = this.previousValue(element);
+	if (!this.settings.messages[element.name]) {
+		this.settings.messages[element.name] = {};
+	}
+	previous.originalMessage = this.settings.messages[element.name].synchronousRemote;
+	this.settings.messages[element.name].synchronousRemote = previous.message;
+
+	param = typeof param === "string" && {
+		url: param
+	} || param;
+
+	if ($.isArray(param)) {
+		//type of request
+		if (param[1] && param[1] === "POST") {
+			type = param[1];
+		}
+		//linked elem options
+		if (param[2]) {
+			linkedParam = param[2];
+		}
+		//if true perform check every time
+		if (param[3] && $(element).closest('form').find('.has-error').length) {
+			bProcess = param[3];
+		}
+		param = param[0];
+	}
+
+	if (previous.old === value && !bProcess) {
+		return previous.valid;
+	}
+
+	previous.old = value;
+	var validator = this;
+	this.startRequest(element);
+	var data = {};
+	data[element.name] = value;
+	if (linkedParam) {
+		data[linkedParam.name] = $(element).closest('form').find('input[name="' +
+			linkedParam.name + '"]').val();
+	}
+	var valid = "pending";
+	$.ajax($.extend(true, {
+		url: param,
+		async: false,
+		mode: "abort",
+		type: type,
+		port: "validate" + element.name,
+		dataType: "json",
+		data: data,
+		success: function(response) {
+			validator.settings.messages[element.name].synchronousRemote = previous
+				.originalMessage;
+			valid = response === true || response === "true" || response.response ===
+				true || response.data === true;
+			if (valid) {
+				var submitted = validator.formSubmitted;
+				validator.prepareElement(element);
+				validator.formSubmitted = submitted;
+				validator.successList.push(element);
+				delete validator.invalid[element.name];
+				validator.showErrors();
+				validator.resetElements([element]);
+			} else {
+				var errors = {};
+				var message = response.errmsg || validator.defaultMessage(
+					element, "synchronousRemote") || response;
+				if (response.error && response.error.errorMessage && !validator.settings.messages[element.name].synchronousRemote) {
+					message = response.error.errorMessage;
+				}
+				errors[element.name] = previous.message = $.isFunction(message) ?
+					message(value) : message;
+				validator.invalid[element.name] = true;
+				validator.showErrors(errors);
+				validator.settings.messages[element.name].synchronousRemote = message;
+			}
+			previous.valid = valid;
+			validator.stopRequest(element, valid);
+		}
+	}, param));
+	return valid;
+}, "This value is already taken");
+
+/**
+ * override default email validation with custom regex
+ * 
+ * 2018-04-04 Kenny Sam : Update Email validation to only require a@a.a (bascially one character)
+ */
+jQuery.validator.methods.email = function(value, element) {
+	var EMAIL_REGEX = /^\w+([+\.-]\w+)*@\w+([\.-]\w+)*(\.\w{1,13})+$/; //disallow special characters
+    var emails = value.split(','),
+        valid = true;
+    for (var i = 0, limit = emails.length; i < limit; i++) {
+        value = emails[i];
+        valid = valid && EMAIL_REGEX.test(value);
+    }
+	return this.optional(element) || valid;
+};
+
+/********************************************************
+ * END : Custom Methods for Validator
+ *******************************************************/
+
+
+/********************************************************
+ * BEGIN : Class
+ *******************************************************/
+
+
+
+/*** Auto Initialize class ***/
+var FORM_VALIDATOR = new FormValidator();
+
+/**
+ * REQUIREMENTS: Can only be called after document is loaded using onload method.
+ *
+ * The class provides functions to create present form validations for specific types of forms. *
+ * More information can be found at http://docs.jquery.com/Plugins/Validation
+ *
+ * @author   Kenny Sam <kennys@davisnet.com>
+ * @since    Available since 2011-09-02
+ */
+function FormValidator() {
+	this.leafSoil = 0;
+
+	/**
+	 * Create a validation for Upgrading Service Plan.
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   Available since 2011-12-12
+	 * @access  public
+	 *
+	 * @param   <int>   formId  The html form id to create validation for.
+	 *
+	 * @return  <Validator> A Validator object
+	 */
+	this.createUpgradeServicePlan = function(formId) {
+
+			var validatorObj = $('#' + formId).validate({
+				rules: {
+					upgradeOption: "required",
+					costOfOldPlan: {
+						required: true,
+						number: true
+					},
+					costOfNewPlan: {
+						required: true,
+						number: true
+					},
+					davisOrderNum: "required",
+					customerNum: "required",
+					purchaseDate: "required"
+				},
+				messages: {
+					upgradeOption: "Please select a plan to upgrade to.",
+					costOfOldPlan: {
+						required: "Please enter the cost of the old plan.",
+						number: "Please enter a valid cost for the old plan."
+					},
+					costOfNewPlan: {
+						required: "Please enter the cost of the new plan.",
+						number: "Please enter a valid cost for the new plan."
+					},
+					davisOrderNum: "Please enter a davis order number.",
+					customerNum: "Please enter a customer number.",
+					purchaseDate: "Please enter purchase date."
+
+				},
+				errorContainer: '#formErrors',
+				errorLabelContainer: '#formErrors ul',
+				errorElement: 'li'
+			});
+
+			//Add Defined Rules
+			if ($('#emal').length > 0) {
+				_addRuleEmail(true);
+			}
+
+			return validatorObj;
+
+		} //createUpgradeServicePlan
+
+	/**
+	 * Create a validation for Purchases a WLNS service plan.
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   2011-01-27
+	 * @access  public
+	 *
+	 * @param   <int>   formId  The html form id to create validation for.
+	 *
+	 * @return  <Validator> A Validator object
+	 */
+	this.createWlnsPurchansePlan = function(formId) {
+
+			var validatorObj = $('#' + formId).validate({
+				rules: {
+					itemServicePlan: "required",
+					wlnsAgreement: "required"
+				},
+				messages: {
+					itemServicePlan: "Please select a new subsciption.",
+					wlnsAgreement: "You must agree to the Service Agreement"
+				},
+				errorContainer: '#formErrors',
+				errorLabelContainer: '#formErrors ul',
+				errorElement: 'li',
+				invalidHandler: function(form, validator) {
+					$(window).scrollTop(0);
+				}
+			});
+
+			//Add Defined Rules
+			_addRuleEmail('email', true);
+
+			return validatorObj;
+
+		} //createUpgradeServicePlan
+
+	/**
+	 * Create a validation for add/edit a reseller.
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   2013-10-25
+	 * @access  public
+	 *
+	 * @param   <int>   formId  The html form id to create validation for.
+	 *
+	 * @return  <Validator> A Validator object
+	 */
+	this.addEditReseller = function(formId) {
+
+		var validatorObj = $('#' + formId).validate({
+			rules: {
+				sResellerName: "required",
+				sCustomerNumber: "required"
+			},
+			messages: {
+				sResellerName: "Please enter a Reseller Name.",
+				sCustomerNumber: "Please enter a Customer Number."
+			}
+		});
+
+		//Add Defined Rules
+		_addRuleEmail('sEmail', true);
+		_addRuleUrl('sWebsite', false);
+		return validatorObj;
+
+	}; //createUpgradeServicePlan
+
+	/**
+	 * Create a validation for Manage Reseller Credits
+	 */
+	this.manageResellerCredits = function(formID) {
+		var validatorObj = $('#' + formID).validate({
+			rules: {
+				sInvoiceNumber: 'required'
+			},
+			messages: {
+				sInvoiceNumber: 'Please enter an Invoice Number'
+			},
+			errorContainer: '#formErrors',
+			errorLabelContainer: '#formErrors',
+			errorElement: 'div'
+		});
+		return validatorObj;
+	}; //manageResellerCredits
+
+
+	/**
+	 * Create a validation for create/update device config info.
+	 *
+	 * @author  Kalin Muskov <kalinm@davisnet.com>
+	 * @since   Available since 2012-12-01
+	 * @access  public
+	 *
+	 * @param ormId  string The html form id to create validation for.
+	 *
+	 * @return  <Validator> A Validator object
+	 */
+	this.deviceConfigInfo = function(formId) {
+
+			var validatorObj = $('#' + formId).validate({
+
+				rules: {
+					iStation1Type: {
+						countISS: true
+					},
+					iStation2Type: {
+						countWIND: true
+					},
+					iStation3Type: {
+						countLEAF: true
+					},
+					iStation4Type: {
+						countSOIL: true
+					},
+					iStation5Type: {
+						countLEAFSOIL: true
+					}
+				},
+				messages: {
+					iStation1Type: {
+						countISS: "You can have only one ISS Station selected."
+					},
+					iStation2Type: {
+						countWIND: "You can have only one WIND Station selected."
+					},
+					iStation3Type: {
+						countLEAF: "You can have only one LEAF Station selected."
+					},
+					iStation4Type: {
+						countSOIL: "You can have only one SOIL Station selected."
+					},
+					iStation5Type: {
+						countLEAFSOIL: function() {
+							if (FORM_VALIDATOR.leafSoil == 1) {
+								return
+									"If LEAF and/or SOIL is selected, you cannot have LEAF/SOIL Station selected.";
+							} else if (FORM_VALIDATOR.leafSoil == 2) {
+								return "You can have only one LEAF/SOIL Station selected.";
+							}
+						}
+					}
+				},
+				errorContainer: '#formErrors',
+				errorLabelContainer: '#formErrors ul',
+				errorElement: 'li'
+			});
+
+			return validatorObj;
+		} // deviceConfigInfo
+
+	/**
+	 * Create a validation for insert/update device settings info.
+	 *
+	 * @author  Kalin Muskov <kalinm@davisnet.com>
+	 * @since   Available since 2012-11-25
+	 * @access  public
+	 *
+	 * @param formId  string The html form id to create validation for.
+	 *
+	 * @return  <Validator> A Validator object
+	 */
+	this.deviceSettingsInfo = function(formId) {
+
+			var tempUnit = LIB.getHiddenInfo('data-tempUnit');
+			var rainUnit = LIB.getHiddenInfo('data-rainUnit');
+			var elevationUnit = LIB.getHiddenInfo('data-elevationUnit');
+			var barometerUnit = LIB.getHiddenInfo('data-barometerUnit');
+			var windSpeedUnit = LIB.getHiddenInfo('data-windSpeedUnit');
+
+			var validatorObj = $('#' + formId).validate({
+				rules: {
+					dStationElevation: {
+						integers: true,
+						range: function() {
+							if (elevationUnit == 1) {
+								return [-999, 15000];
+							} else if (elevationUnit == 2) {
+								return [-304, 4572];
+							}
+						}
+					},
+					dSeaLevelBar: {
+						range: function() {
+							if (barometerUnit == 1) {
+								return [16, 32.5];
+							} else if (barometerUnit == 2) {
+								return [407, 825];
+							} else if (barometerUnit == 3 || barometerUnit == 4) {
+								return [542, 1100];
+							}
+						}
+					},
+					dYearToDateRainfall: {
+						range: function() {
+							if (rainUnit == 1) {
+								return [0, 199.99];
+							} else if (rainUnit == 2) {
+								return [0, 5079]
+							}
+						}
+					},
+					dAlarmOutsideTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmOutsideTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmOutsideHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmOutsideHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmDewPointHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmDewPointLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmWindChill: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmHeatIndex: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmTHSWIndex: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmBarTrendHigh: {
+						range: function() {
+							if (barometerUnit == 1) {
+								return [0.1, 0.25];
+							} else if (barometerUnit == 2) {
+								return [0.1, 6.35];
+							} else if (barometerUnit == 3 || barometerUnit == 4) {
+								return [0.1, 8.46];
+							}
+						}
+					},
+					dAlarmBarTrendLow: {
+						range: function() {
+							if (barometerUnit == 1) {
+								return [0.1, 0.25];
+							} else if (barometerUnit == 2) {
+								return [0.1, 6.35];
+							} else if (barometerUnit == 3 || barometerUnit == 4) {
+								return [0.1, 8.46];
+							}
+						}
+					},
+					iAlarmSolarRad: {
+						integers: true,
+						range: [0, 1800]
+					},
+					iAlarmUVIndex: {
+						number: true,
+						range: [0.0, 16.0]
+					},
+					dAlarmInsideTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmInsideTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmInsideHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmInsideHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmETDay: {
+						range: function() {
+							if (rainUnit == 1) {
+								return [0, 0.254];
+							} else if (rainUnit == 2) {
+								return [0, 6.452]
+							}
+						}
+					},
+					iAlarmLeafWet1High: {
+						integers: true,
+						range: function() {
+							return _leafWetnessRange();
+						}
+					},
+					iAlarmLeafWet1Low: {
+						integers: true,
+						range: function() {
+							return _leafWetnessRange();
+						}
+					},
+					iAlarmLeafWet2High: {
+						integers: true,
+						range: function() {
+							return _leafWetnessRange();
+						}
+					},
+					iAlarmLeafWet2Low: {
+						integers: true,
+						range: function() {
+							return _leafWetnessRange();
+						}
+					},
+					dAlarmLeafTemp1High: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmLeafTemp1Low: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmLeafTemp2High: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmLeafTemp2Low: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmSoilMoist1High: {
+						integers: true,
+						range: function() {
+							return _soilMoistureRange();
+						}
+					},
+					iAlarmSoilMoist1Low: {
+						integers: true,
+						range: function() {
+							return _soilMoistureRange();
+						}
+					},
+					iAlarmSoilMoist2High: {
+						integers: true,
+						range: function() {
+							return _soilMoistureRange();
+						}
+					},
+					iAlarmSoilMoist2Low: {
+						integers: true,
+						range: function() {
+							return _soilMoistureRange();
+						}
+					},
+					iAlarmSoilMoist3High: {
+						integers: true,
+						range: function() {
+							return _soilMoistureRange();
+						}
+					},
+					iAlarmSoilMoist3Low: {
+						integers: true,
+						range: function() {
+							return _soilMoistureRange();
+						}
+					},
+					iAlarmSoilMoist4High: {
+						integers: true,
+						range: function() {
+							return _soilMoistureRange();
+						}
+					},
+					iAlarmSoilMoist4Low: {
+						integers: true,
+						range: function() {
+							return _soilMoistureRange();
+						}
+					},
+					dAlarmSoilTemp1High: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmSoilTemp1Low: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmSoilTemp2High: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmSoilTemp2Low: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmSoilTemp3High: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmSoilTemp3Low: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmSoilTemp4High: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmSoilTemp4Low: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmStation1ExtraTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmStation1ExtraTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmStation1ExtraHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmStation1ExtraHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmStation2ExtraTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmStation2ExtraTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmStation2ExtraHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmStation2ExtraHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmStation3ExtraTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmStation3ExtraTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmStation3ExtraHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmStation3ExtraHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmStation4ExtraTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmStation4ExtraTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmStation4ExtraHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmStation4ExtraHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmStation5ExtraTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmStation5ExtraTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmStation5ExtraHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmStation5ExtraHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmStation6ExtraTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmStation6ExtraTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmStation6ExtraHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmStation6ExtraHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmStation7ExtraTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmStation7ExtraTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmStation7ExtraHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmStation7ExtraHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmStation8ExtraTempHigh: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					dAlarmStation8ExtraTempLow: {
+						range: function() {
+							return _temperatureRange(tempUnit);
+						}
+					},
+					iAlarmStation8ExtraHumHigh: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					iAlarmStation8ExtraHumLow: {
+						integers: true,
+						range: function() {
+							return _humidityRange();
+						}
+					},
+					dAlarmWindSpeedHighCurrent: {
+						integers: true,
+						range: function() {
+							if (windSpeedUnit == 1) {
+								return [1, 200];
+							} else if (windSpeedUnit == 2) {
+								return [1, 173];
+							} else if (windSpeedUnit == 3) {
+								return [1, 321];
+							} else if (windSpeedUnit == 4) {
+								return [1, 89]
+							}
+						}
+					},
+					dAlarmWindSpeedHigh10MinAvg: {
+						integers: true,
+						range: function() {
+							if (windSpeedUnit == 1) {
+								return [1, 200];
+							} else if (windSpeedUnit == 2) {
+								return [1, 173];
+							} else if (windSpeedUnit == 3) {
+								return [1, 321];
+							} else if (windSpeedUnit == 4) {
+								return [1, 89]
+							}
+						}
+					},
+					dAlarmRainFlashFlood: {
+						range: function() {
+							return _rainRange(rainUnit);
+						}
+					},
+					dAlarmRainStorm: {
+						range: function() {
+							return _rainRange(rainUnit);
+						}
+					},
+					dAlarmRain24Hour: {
+						range: function() {
+							return _rainRange(rainUnit);
+						}
+					},
+					dAlarmRainRate: {
+						range: function() {
+							return _rainRange(rainUnit);
+						}
+					},
+					dCalibInsideTemp: {
+						range: function() {
+							return _calibrationTemperatureRange(tempUnit);
+						}
+					},
+					dCalibOutsideTemp: {
+						range: function() {
+							return _calibrationTemperatureRange(tempUnit);
+						}
+					},
+					iCalibInsideHum: {
+						integers: true,
+						range: function() {
+							return _calibrationHumidityRange();
+						}
+					},
+					iCalibOutsideHum: {
+						integers: true,
+						range: function() {
+							return _calibrationHumidityRange();
+						}
+					},
+					iCalibWindDir: {
+						integers: true,
+						range: [0, 359]
+					}
+				},
+				messages: {
+					dStationElevation: {
+						integers: function() {
+							return _integersMessage('Station Elevation');
+						},
+						range: function() {
+							if (elevationUnit == 1) {
+								return "Please enter station elevation between -999 and 15000 ft.";
+							} else if (elevationUnit == 2) {
+								return "Please enter station elevation between -304 and 4572 meters.";
+							}
+						}
+					},
+					dSeaLevelBar: {
+						range: function() {
+							if (barometerUnit == 1) {
+								return "Please enter sea level barometer between 16 and 32.5 in Hg.";
+							} else if (barometerUnit == 2) {
+								return "Please enter sea level barometer between 407 and 825 mm Hg.";
+							} else if (barometerUnit == 3) {
+								return "Please enter sea level barometer between 542 and 1100 mb.";
+							} else if (barometerUnit == 4) {
+								return "Please enter sea level barometer between 542 and 1100 hPa."
+							}
+						}
+					},
+					dYearToDateRainfall: {
+						range: function() {
+							if (rainUnit == 1) {
+								return "Please enter year to date rainfall between 0 and 199.99 in.";
+							} else if (rainUnit == 2) {
+								return "Please enter year to date rainfall between 0 and 5079 mm.";
+							}
+						}
+					},
+					dAlarmOutsideTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'High Outside');
+						}
+					},
+					dAlarmOutsideTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Low Outside');
+						}
+					},
+					iAlarmOutsideHumHigh: {
+						integers: function() {
+							return _integersMessage('High Outside Humidity');
+						},
+						range: function() {
+							return _humidityMessage('High Outside');
+						}
+					},
+					iAlarmOutsideHumLow: {
+						integers: function() {
+							return _integersMessage('Low Outside Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Low Outside');
+						}
+					},
+					dAlarmDewPointHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'High Dew Point');
+						}
+					},
+					dAlarmDewPointLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Low Dew Point');
+						}
+					},
+					dAlarmWindChill: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Low Wind Chill');
+						}
+					},
+					dAlarmHeatIndex: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'High Heat Index');
+						}
+					},
+					dAlarmTHSWIndex: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'High THSW Index');
+						}
+					},
+					dAlarmBarTrendHigh: {
+						range: function() {
+							if (barometerUnit == 1) {
+								return
+									"Please enter high barometer trend between 0.1 and 0.25 in Hg.";
+							} else if (barometerUnit == 2) {
+								return
+									"Please enter high barometer trend between 0.1 and 6.35 mm Hg.";
+							} else if (barometerUnit == 3) {
+								return "Please enter high barometer trend between 0.1 and 8.46 mb.";
+							} else if (barometerUnit == 4) {
+								return "Please enter high barometer trend between 0.1 and 8.46 hPa.";
+							}
+						}
+					},
+					dAlarmBarTrendLow: {
+						range: function() {
+							if (barometerUnit == 1) {
+								return "Please enter low barometer trend between 0.1 and 0.25 in Hg.";
+							} else if (barometerUnit == 2) {
+								return "Please enter low barometer trend between 0.1 and 6.35 mm Hg.";
+							} else if (barometerUnit == 3) {
+								return "Please enter low barometer trend between 0.1 and 8.46 mb.";
+							} else if (barometerUnit == 4) {
+								return "Please low barometer trend between 0.1 and 8.46 hPa.";
+							}
+						}
+					},
+					iAlarmSolarRad: {
+						integers: function() {
+							return _integersMessage('Solar Radiation');
+						},
+						range: "Please enter solar radiation between 0 and 1800 W/m<sup>2</sup>."
+					},
+					iAlarmUVIndex: {
+						number: "Please enter numbers for high UV Index.",
+						range: "Please enter high UV Index between 0.0 and 16.0 index."
+					},
+					dAlarmInsideTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'High Inside');
+						}
+					},
+					dAlarmInsideTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Low Inside');
+						}
+					},
+					iAlarmInsideHumHigh: {
+						integers: function() {
+							return _integersMessage('High Inside Humidity');
+						},
+						range: function() {
+							return _humidityMessage('High Inside');
+						}
+					},
+					iAlarmInsideHumLow: {
+						integers: function() {
+							return _integersMessage('Low Inside Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Low Inside');
+						}
+					},
+					dAlarmETDay: {
+						range: function() {
+							if (rainUnit == 1) {
+								return "Please enter ET Day between 0 and 0.254 in.";
+							} else if (rainUnit == 2) {
+								return "Please enter ET Day between 0 and 6.452 mm.";
+							}
+						}
+					},
+					iAlarmLeafWet1High: {
+						integers: function() {
+							return _integersMessage('Leaf 1 High Wetness');
+						},
+						range: function() {
+							return _leafWetnessMessage('Leaf 1 High');
+						}
+					},
+					iAlarmLeafWet1Low: {
+						integers: function() {
+							return _integersMessage('Leaf 1 Low Wetness');
+						},
+						range: function() {
+							return _leafWetnessMessage('Leaf 1 Low');
+						}
+					},
+					iAlarmLeafWet2High: {
+						integers: function() {
+							return _integersMessage('Leaf 2 High Wetness');
+						},
+						range: function() {
+							return _leafWetnessMessage('Leaf 2 High');
+						}
+					},
+					iAlarmLeafWet2Low: {
+						integers: function() {
+							return _integersMessage('Leaf 2 Low Wetness');
+						},
+						range: function() {
+							return _leafWetnessMessage('Leaf 2 Low');
+						}
+					},
+					dAlarmLeafTemp1High: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Leaf 1 High');
+						}
+					},
+					dAlarmLeafTemp1Low: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Leaf 1 Low');
+						}
+					},
+					dAlarmLeafTemp2High: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Leaf 2 High');
+						}
+					},
+					dAlarmLeafTemp2Low: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Leaf 2 Low');
+						}
+					},
+					iAlarmSoilMoist1High: {
+						integers: function() {
+							return _integersMessage('Soil 1 High Moisture');
+						},
+						range: function() {
+							return _soilMoistureMessage('Soil 1 High');
+						}
+					},
+					iAlarmSoilMoist1Low: {
+						integers: function() {
+							return _integersMessage('Soil 1 Low Moisture');
+						},
+						range: function() {
+							return _soilMoistureMessage('Soil 1 Low');
+						}
+					},
+					iAlarmSoilMoist2High: {
+						integers: function() {
+							return _integersMessage('Soil 2 High Moisture');
+						},
+						range: function() {
+							return _soilMoistureMessage('Soil 2 High');
+						}
+					},
+					iAlarmSoilMoist2Low: {
+						integers: function() {
+							return _integersMessage('Soil 2 Low Moisture');
+						},
+						range: function() {
+							return _soilMoistureMessage('Soil 2 Low');
+						}
+					},
+					iAlarmSoilMoist3High: {
+						integers: function() {
+							return _integersMessage('Soil 3 High Moisture');
+						},
+						range: function() {
+							return _soilMoistureMessage('Soil 3 High');
+						}
+					},
+					iAlarmSoilMoist3Low: {
+						integers: function() {
+							return _integersMessage('Soil 3 Low Moisture');
+						},
+						range: function() {
+							return _soilMoistureMessage('Soil 3 Low');
+						}
+					},
+					iAlarmSoilMoist4High: {
+						integers: function() {
+							return _integersMessage('Soil 4 High Moisture');
+						},
+						range: function() {
+							return _soilMoistureMessage('Soil 4 High');
+						}
+					},
+					iAlarmSoilMoist4Low: {
+						integers: function() {
+							return _integersMessage('Soil 4 Low Moisture');
+						},
+						range: function() {
+							return _soilMoistureMessage('Soil 4 Low');
+						}
+					},
+					dAlarmSoilTemp1High: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Soil 1 High');
+						}
+					},
+					dAlarmSoilTemp1Low: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Soil 1 Low');
+						}
+					},
+					dAlarmSoilTemp2High: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Soil 2 High');
+						}
+					},
+					dAlarmSoilTemp2Low: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Soil 2 Low');
+						}
+					},
+					dAlarmSoilTemp3High: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Soil 3 High');
+						}
+					},
+					dAlarmSoilTemp3Low: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Soil 3 Low');
+						}
+					},
+					dAlarmSoilTemp4High: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Soil 4 High');
+						}
+					},
+					dAlarmSoilTemp4Low: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Soil 4 Low');
+						}
+					},
+					dAlarmStation1ExtraTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 1 Extra High');
+						}
+					},
+					dAlarmStation1ExtraTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 1 Extra Low');
+						}
+					},
+					iAlarmStation1ExtraHumHigh: {
+						integers: function() {
+							return _integersMessage('Station 1 Extra High Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 1 Extra High');
+						}
+					},
+					iAlarmStation1ExtraHumLow: {
+						integers: function() {
+							return _integersMessage('Station 1 Extra Low Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 1 Extra Low');
+						}
+					},
+					dAlarmStation2ExtraTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 2 Extra High');
+						}
+					},
+					dAlarmStation2ExtraTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 2 Extra Low');
+						}
+					},
+					iAlarmStation2ExtraHumHigh: {
+						integers: function() {
+							return _integersMessage('Station 2 Extra High Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 2 Extra High');
+						}
+					},
+					iAlarmStation2ExtraHumLow: {
+						integers: function() {
+							return _integersMessage('Station 2 Extra Low Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 2 Extra Low');
+						}
+					},
+					dAlarmStation3ExtraTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 3 Extra High');
+						}
+					},
+					dAlarmStation3ExtraTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 3 Extra Low');
+						}
+					},
+					iAlarmStation3ExtraHumHigh: {
+						integers: function() {
+							return _integersMessage('Station 3 Extra High Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 3 Extra High');
+						}
+					},
+					iAlarmStation3ExtraHumLow: {
+						integers: function() {
+							return _integersMessage('Station 3 Extra Low Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 3 Extra Low');
+						}
+					},
+					dAlarmStation4ExtraTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 4 Extra High');
+						}
+					},
+					dAlarmStation4ExtraTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 4 Extra Low');
+						}
+					},
+					iAlarmStation4ExtraHumHigh: {
+						integers: function() {
+							return _integersMessage('Station 4 Extra High Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 4 Extra High');
+						}
+					},
+					iAlarmStation4ExtraHumLow: {
+						integers: function() {
+							return _integersMessage('Station 4 Extra Low Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 4 Extra Low');
+						}
+					},
+					dAlarmStation5ExtraTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 5 Extra High');
+						}
+					},
+					dAlarmStation5ExtraTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 5 Extra Low');
+						}
+					},
+					iAlarmStation5ExtraHumHigh: {
+						integers: function() {
+							return _integersMessage('Station 5 Extra High Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 5 Extra High');
+						}
+					},
+					iAlarmStation5ExtraHumLow: {
+						integers: function() {
+							return _integersMessage('Station 5 Extra Low Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 5 Extra Low');
+						}
+					},
+					dAlarmStation6ExtraTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 6 Extra High');
+						}
+					},
+					dAlarmStation6ExtraTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 6 Extra Low');
+						}
+					},
+					iAlarmStation6ExtraHumHigh: {
+						integers: function() {
+							return _integersMessage('Station 6 Extra High Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 6 Extra High');
+						}
+					},
+					iAlarmStation6ExtraHumLow: {
+						integers: function() {
+							return _integersMessage('Station 6 Extra Low Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 6 Extra Low');
+						}
+					},
+					dAlarmStation7ExtraTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 7 Extra High');
+						}
+					},
+					dAlarmStation7ExtraTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 7 Extra Low');
+						}
+					},
+					iAlarmStation7ExtraHumHigh: {
+						integers: function() {
+							return _integersMessage('Station 7 Extra High Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 7 Extra High');
+						}
+					},
+					iAlarmStation7ExtraHumLow: {
+						integers: function() {
+							return _integersMessage('Station 7 Extra Low Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 7 Extra Low');
+						}
+					},
+					dAlarmStation8ExtraTempHigh: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 8 Extra High');
+						}
+					},
+					dAlarmStation8ExtraTempLow: {
+						range: function() {
+							return _temperatureMessage(tempUnit, 'Station 8 Extra Low');
+						}
+					},
+					iAlarmStation8ExtraHumHigh: {
+						integers: function() {
+							return _integersMessage('Station 8 Extra High Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 8 Extra High');
+						}
+					},
+					iAlarmStation8ExtraHumLow: {
+						integers: function() {
+							return _integersMessage('Station 8 Extra Low Humidity');
+						},
+						range: function() {
+							return _humidityMessage('Station 8 Extra Low');
+						}
+					},
+					dAlarmWindSpeedHighCurrent: {
+						integers: function() {
+							return _integersMessage('Current Wind Speed High');
+						},
+						range: function() {
+							if (windSpeedUnit == 1) {
+								return "Please enter high current wind speed between 1 and 200 mph.";
+							} else if (windSpeedUnit == 2) {
+								return
+									"Please enter high current wind speed between 1 and 173 knots.";
+							} else if (windSpeedUnit == 3) {
+								return "Please enter high current wind speed between 1 and 321 km/h.";
+							} else if (windSpeedUnit == 4) {
+								return "Please enter high current wind speed between 1 and 89 m/s.";
+							}
+						}
+					},
+					dAlarmWindSpeedHigh10MinAvg: {
+						integers: function() {
+							return _integersMessage('10 min Average Wind Speed High');
+						},
+						range: function() {
+							if (windSpeedUnit == 1) {
+								return
+									"Please enter high 10 min average wind speed between 1 and 200 mph.";
+							} else if (windSpeedUnit == 2) {
+								return
+									"Please enter high 10 min average wind speed between 1 and 173 knots.";
+							} else if (windSpeedUnit == 3) {
+								return
+									"Please enter high 10 min average wind speed between 1 and 321 km/h.";
+							} else if (windSpeedUnit == 4) {
+								return
+									"Please enter high 10 min average wind speed between 1 and 89 m/s.";
+							}
+						}
+					},
+					dAlarmRainFlashFlood: {
+						range: function() {
+							return _rainMessage(rainUnit, 'Rain Flash Flood');
+						}
+					},
+					dAlarmRainStorm: {
+						range: function() {
+							return _rainMessage(rainUnit, 'Rain Storm');
+						}
+					},
+					dAlarmRain24Hour: {
+						range: function() {
+							return _rainMessage(rainUnit, 'Rain 24 Hours');
+						}
+					},
+					dAlarmRainRate: {
+						range: function() {
+							return _rainRateMessage(rainUnit, 'Rain Rate');
+						}
+					},
+					dCalibInsideTemp: {
+						range: function() {
+							return _calibrationTemperatureMessage(tempUnit, 'Inside Calibration');
+						}
+					},
+					dCalibOutsideTemp: {
+						range: function() {
+							return _calibrationTemperatureMessage(tempUnit, 'Outside Calibration');
+						}
+					},
+					iCalibInsideHum: {
+						integers: function() {
+							return _integersMessage('Inside Humidity Calibration');
+						},
+						range: function() {
+							return _calibrationHumidityMessage('Inside Calibration');
+						}
+					},
+					iCalibOutsideHum: {
+						integers: function() {
+							return _integersMessage('Outside Humidity Calibration');
+						},
+						range: function() {
+							return _calibrationHumidityMessage('Outside Calibration');
+						}
+					},
+					iCalibWindDir: {
+						integers: function() {
+							return _integersMessage('Wind Direction');
+						},
+						range: "Please enter set direction to between 0 and 359."
+					}
+				},
+				errorContainer: '#formErrors',
+				errorLabelContainer: '#formErrors ul',
+				errorElement: 'li'
+			});
+
+			return validatorObj;
+
+		} //deviceSettingsInfo
+
+
+	/**
+	 * Create a validation for VC Status page.
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   2013-07-17
+	 * @access  public
+	 *
+	 * @param   <int>   formId  The html form id to create validation for.
+	 *
+	 * @return  <Validator> A Validator object
+	 */
+	this.createVcStatusChart = function(formId) {
+
+			var validatorObj = $('#' + formId).validate({
+				rules: {
+					//				chartDID: "required",
+					startDate: "required",
+					endDate: "required"
+				},
+				messages: {
+					//				chartDID: "<br>Please enter a Device ID",
+					startDate: "<br>Please enter a start date",
+					endDate: "<br>Please enter an end date"
+				},
+				errorClass: 'fontError'
+			});
+
+			return validatorObj;
+
+		} //createUpgradeServicePlan
+
+	/**
+	 * Create a validation for VC Status page.
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   2013-07-17
+	 * @access  public
+	 *
+	 * @param   <int>   formId  The html form id to create validation for.
+	 *
+	 * @return  <Validator> A Validator object
+	 */
+	this.createVcStatusTool = function(formId) {
+
+			var validatorObj = $('#' + formId).validate({
+				rules: {
+					chartDID: {
+						required: function() {
+							if (LIB.isNullEmpty($('#chartUsername').val()) &&
+								LIB.isNullEmpty($('#chartDID').val())) {
+								return true;
+							} else {
+								return false;
+							}
+						}
+					},
+					startDate: "required",
+					endDate: "required"
+				},
+				messages: {
+					chartDID: "&nbsp;&nbsp;Please enter a Username or DID",
+					startDate: "<br>Please enter a start date",
+					endDate: "<br>Please enter an end date"
+				},
+				errorClass: 'fontError'
+			});
+
+			return validatorObj;
+
+		} //createUpgradeServicePlan
+
+	/**
+	 * Create a validation for update plan pricing  page.
+	 *
+	 * @author  Kalin Muskov<kalinm@davisnet.com>
+	 * @since   2013-11-22
+	 * @access  public
+	 *
+	 * @param   <string>   formId  The html form id to create validation for.
+	 *
+	 * @return  <Validator> A Validator object
+	 */
+	this.createPlanPricing = function(formId) {
+
+			var validatorObj = $('#' + formId).validate({
+				rules: {
+					plan_06632A: {
+						required: true,
+						number: true
+					},
+					plan_06634A: {
+						required: true,
+						number: true
+					},
+					plan_06636A: {
+						required: true,
+						number: true
+					},
+					plan_06632B: {
+						required: true,
+						number: true
+					},
+					plan_06634B: {
+						required: true,
+						number: true
+					},
+					plan_06636B: {
+						required: true,
+						number: true
+					},
+					plan_06632C: {
+						required: true,
+						number: true
+					},
+					plan_06634C: {
+						required: true,
+						number: true
+					},
+					plan_06636C: {
+						required: true,
+						number: true
+					},
+					plan_06558: {
+						required: true,
+						number: true
+					}
+				},
+				messages: {
+					plan_06632A: {
+						required: "Please enter a price for 06632A plan.",
+						number: "Please enter valid price for 06632A plan."
+					},
+					plan_06634A: {
+						required: "Please enter a price for 06634A plan.",
+						number: "Please enter valid price for 06634A plan."
+					},
+					plan_06636A: {
+						required: "Please enter a price for 06636A plan.",
+						number: "Please enter valid price for 06636A plan."
+					},
+					plan_06632B: {
+						required: "Please enter a price for 06632B plan.",
+						number: "Please enter valid price for 06632B plan."
+					},
+					plan_06634B: {
+						required: "Please enter a price for 06634B plan.",
+						number: "Please enter valid price for 06634B plan."
+					},
+					plan_06636B: {
+						required: "Please enter a price for 06636B plan.",
+						number: "Please enter valid price for 06636B plan."
+					},
+					plan_06632C: {
+						required: "Please enter a price for 06632C plan.",
+						number: "Please enter valid price for 06632C plan."
+					},
+					plan_06634C: {
+						required: "Please enter a price for 06634C plan.",
+						number: "Please enter valid price for 06634C plan."
+					},
+					plan_06636C: {
+						required: "Please enter a price for 06636C plan.",
+						number: "Please enter valid price for 06636C plan."
+					},
+					plan_06558: {
+						required: "Please enter a price for 06558 plan.",
+						number: "Please enter valid price for 06558 plan."
+					}
+				},
+				errorContainer: '.formErrors',
+				errorLabelContainer: '.formErrors ul',
+				errorElement: 'li'
+			});
+
+			return validatorObj;
+
+		} //createPlanPricing
+
+
+	/**
+	 * Returns temperature range
+	 *
+	 * @param unit  Temperature unit
+	 */
+	function _temperatureRange(unit) {
+		if (unit == 1) {
+			return [-40, 150];
+		} else if (unit == 2) {
+			return [-40, 65];
+		}
+		return [0, 0];
+	}
+
+	/**
+	 * Returns calibration temperature range
+	 *
+	 * @param unit Temperature unit
+	 */
+	function _calibrationTemperatureRange(unit) {
+		if (unit == 1) {
+			return [-12.8, 12.7];
+		} else if (unit == 2) {
+			return [-7.11, 7.06];
+		}
+		return [0, 0];
+	}
+
+	/**
+	 * Returns humidity range
+	 */
+	function _humidityRange() {
+		return [1, 100];
+	}
+
+	/**
+	 * Returns calibration humidity range
+	 */
+	function _calibrationHumidityRange() {
+		return [-100, 100];
+	}
+
+	/**
+	 * Returns leaf wetness range
+	 */
+	function _leafWetnessRange() {
+		return [0, 15];
+	}
+
+	/**
+	 * Returns soil moisture range
+	 */
+	function _soilMoistureRange() {
+		return [0, 200];
+	}
+
+	/**
+	 * Returns rain range
+	 *
+	 * @param unit Rain unit
+	 */
+	function _rainRange(unit) {
+		if (unit == 1) {
+			return [0, 99];
+		} else if (unit == 2) {
+			return [0, 2514]
+		}
+		return [0, 0];
+	}
+
+	function _integersMessage(alarm) {
+		return 'Please enter only whole numbers for ' + alarm + '.';
+	}
+
+	/**
+	 * Returns error message that explains failure of check or verify
+	 *
+	 * @param unit int
+	 * @param alarm string
+	 * @return string
+	 */
+	function _temperatureMessage(unit, alarm) {
+		if (unit == 1) {
+			return 'Please enter ' + alarm + ' Temperature between -40 and 150 &deg;F.';
+		} else if (unit == 2) {
+			return 'Please enter ' + alarm + ' Temperature between -40 and 65 &deg;C.';
+		}
+		return 'No error message defined for ' + alarm + ' Temperature.';
+	}
+
+	/**
+	 * Returns error message that explains failure of check or verify
+	 *
+	 * @param unit int
+	 * @param alarm string
+	 * @return string
+	 */
+	function _calibrationTemperatureMessage(unit, alarm) {
+		if (unit == 1) {
+			return 'Please enter ' + alarm +
+				' Temperature between -12.8 and 12.7 &deg;F.';
+		} else if (unit == 2) {
+			return 'Please enter ' + alarm +
+				' Temperature between -7.11 and 7.06 &deg;C.';
+		}
+		return 'No error message defined for ' + alarm + ' Temperature.';
+	}
+
+	/**
+	 * Returns error message that explains failure of check or verify
+	 *
+	 * @param alarm stiring
+	 * @return string
+	 */
+	function _humidityMessage(alarm) {
+		return 'Please enter ' + alarm + ' Humidity between 1 and 100 %.';
+	}
+
+	/**
+	 * Returns error message that explains failure of check or verify
+	 *
+	 * @param alarm string
+	 * @return string
+	 */
+	function _calibrationHumidityMessage(alarm) {
+		return 'Please enter ' + alarm + ' Humidity between -100 and 100 %.';
+	}
+
+	/**
+	 * Returns error message that explains failure of check or verify
+	 *
+	 * @param alarm string
+	 * @return string
+	 */
+	function _leafWetnessMessage(alarm) {
+		return 'Please enter ' + alarm + ' Wetness between 0 and 15.';
+	}
+
+	/**
+	 * Returns error message that explains failure of check or verify
+	 *
+	 * @param alarm string
+	 * @return string
+	 */
+	function _soilMoistureMessage(alarm) {
+		return 'Please enter ' + alarm + ' Wetness between 0 and 200.';
+	}
+
+	/**
+	 * Returns error message that explains failure of check or verify
+	 *
+	 * @param unit int
+	 * @param alarm string
+	 * @return string
+	 */
+	function _rainMessage(unit, alarm) {
+		if (unit == 1) {
+			return 'Please enter ' + alarm + ' between 0 and 99 in.';
+		} else if (unit == 2) {
+			return 'Please enter ' + alarm + ' between 0 and 2514 mm.';
+		}
+		return 'No error message defined for ' + alarm + '.';
+	}
+
+	/**
+	 * Returns error message that explains failure of check or verify
+	 *
+	 * @param unit int
+	 * @param alarm string
+	 * @return string
+	 */
+	function _rainRateMessage(unit, alarm) {
+		if (unit == 1) {
+			return 'Please enter ' + alarm + ' between 0 and 99 in/hr.';
+		} else if (unit == 2) {
+			return 'Please enter ' + alarm + ' between 0 and 2514 mm/hr.';
+		}
+		return 'No error message defined for ' + alarm + '.';
+	}
+
+	/**********************************
+	 * Defined Rules
+	 * REQUIREMENTS : The name of the input field must match to the designated rule name
+	 **********************************
+
+	 /*
+	 * Rule: Email Address
+	 * Input Name : email
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   Available since 2011-09-02
+	 * @access  private
+	 * @version	2013-10-25 Kenny Sam add parameter to set the name of the email field.
+	 *
+	 * @param string name The name of the field
+	 * @param boolean isRequired Whether to validate the required field.
+	 */
+	this._addRuleEmail = function(name, isRequired) {
+		$("input[name=" + name + "]").rules('add', {
+			required: isRequired,
+			email: true,
+			messages: {
+				required: formatErrorMessage("error_email_required"),
+				email: formatErrorMessage("error_email_email")
+			}
+		});
+	}; //_addRuleEmail
+
+	/*
+	 * Rule: Country
+	 * Input Name : country
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   Available since 2011-09-02
+	 * @access  private
+	 *
+	 * @param   <boolean>   isRequired  Whether to validate the required field.
+	 */
+	this._addRuleCountry = function(isRequired) {
+			$("select[name=country]").rules('add', {
+				requiredSelect: isRequired,
+				messages: {
+					requiredSelect: "Please select country."
+				}
+			});
+		} //_addRuleCountry
+
+	/*
+	 * Rule: State
+	 * Input Name : state
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   Available since 2011-09-02
+	 * @access  private
+	 *
+	 * @param   <boolean>   isRequired  Whether to validate the required field.
+	 */
+	this._addRuleState = function(isRequired) {
+			$("select[name=state]").rules('add', {
+				requiredSelect: isRequired,
+				messages: {
+					requiredSelect: "Please select state."
+				}
+			});
+		} //_addRuleState
+
+	/*
+	 * Rule: Adress
+	 * Input Name : address1
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   Available since 2011-09-02
+	 * @access  private
+	 *
+	 * @param   <boolean>   isRequired  Whether to validate the required field.
+	 */
+	this._addRuleAddress = function(isRequired) {
+			$("input[name=address1]").rules('add', {
+				required: isRequired,
+				messages: {
+					requiredSelect: "Please enter address."
+				}
+			});
+		} //_addRuleAddress
+
+	/*
+	 * Rule: City
+	 * Input Name : city
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   Available since 2011-09-02
+	 * @access  private
+	 *
+	 * @param   <boolean>   isRequired  Whether to validate the required field.
+	 */
+	this._addRuleCity = function(isRequired) {
+			$("input[name=city]").rules('add', {
+				required: isRequired,
+				messages: {
+					requiredSelect: "Please enter city."
+				}
+			});
+		} //_addRuleCity
+
+	/*
+	 * Rule: Zipcode
+	 * Input Name : zip
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   Available since 2011-09-02
+	 * @access  private
+	 *
+	 * @param   <boolean>   isRequired  Whether to validate the required field.
+	 */
+	this._addRuleZip = function(isRequired) {
+			$("input[name=zip]").rules('add', {
+				required: isRequired,
+				digits: true,
+				messages: {
+					required: 'Please enter a zipcode',
+					digits: 'Please enter a valid zip.'
+				}
+			});
+		} //_addRuleZip
+
+	/*
+	 * Rule: URL
+	 * Input Name : url
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   Available since 2011-09-02
+	 * @access  private
+	 * @version	2013-10-25 Kenny Sam add parameter to set the name of the email field.
+	 *
+	 * @param   <string>	name		The name of the field
+	 * @param   <boolean>   isRequired  Whether to validate the required field.
+	 */
+	this._addRuleUrl = function(name, isRequired) {
+
+			$("input[name=" + name + "]").rules('add', {
+				required: isRequired,
+				url: function(elem) {
+					var url = $(elem).val();
+
+					if (LIB.isNotNullEmpty(url)) {
+						if (url.search('http://') == -1 && url.search('https://') == -1) {
+							$(elem).val('http://' + url);
+						}
+						return true;
+					}
+
+					return false;
+
+				},
+				messages: {
+					required: 'Please enter a url',
+					url: 'Please enter a valid url.'
+				}
+			});
+		} //_addRuleUrl
+
+	/*
+	 * Rule: Latitude
+	 * Input Name : lat
+	 *
+	 * @author  Kenny Sam <kennys@davisnet.com>
+	 * @since   Available since 2011-09-02
+	 * @access  private
+	 *
+	 * @param   <boolean>   isRequired  Whether to validate the required field.
+	 */
+	this._addRuleLatLng = function(isRequired) {
+
+		var requiredMsg = 'Please enter a lat/lng.';
+		var numberMsg = 'Lat/Lng must be a number.';
+		var latLngMsg = 'Please enter valid lat/lng.';
+
+		$("input[name=lat]").rules('add', {
+			required: isRequired,
+			number: true,
+			latitude: true,
+			messages: {
+				required: requiredMsg,
+				number: numberMsg,
+				latitude: latLngMsg
+			}
+		});
+
+		$("input[name=lng]").rules('add', {
+			required: isRequired,
+			number: true,
+			longitude: true,
+			messages: {
+				required: requiredMsg,
+				number: numberMsg,
+				longitude: latLngMsg
+			}
+		});
+
+	}; //_addRuleLatLng
+
+} //FormValidator

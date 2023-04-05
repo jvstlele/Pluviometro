@@ -1,0 +1,214 @@
+var wl = wl || {};
+
+wl.app.module('oUserMessage', function(oUserMessage, oBulletinApp, Backbone,
+  Marionette, $) {
+
+
+  oUserMessage.trialExpiredView = Marionette.ItemView.extend({
+    template: window.tpl["trial-expired-message"],
+    ui: {
+      "iconClose": ".wl-icon.icon-close",
+      "noThanks": "#no-thanks"
+    },
+    events: {
+      "click @ui.iconClose": "hideModal",
+      "click @ui.noThanks": "hideModal"
+    },
+    model: new Backbone.Model(),
+    initialize: function () {
+      this.model.set('systemId', wl.data.systemId)
+    },
+    onRender: function() {},
+    onReaderLoad: function(e, input) {},
+    hideModal: function() {
+      oBulletinApp.Modal.hideModal();
+    }
+  });
+  
+  oUserMessage.wlip2020Issue = Marionette.ItemView.extend({
+    template: window.tpl["wlip-2020-issue"],
+    ui: {
+      "iconClose": ".wl-icon.icon-close",
+    },
+    events: {
+      "click @ui.iconClose": "hideModal",
+    },
+    onRender: function() {},
+    onReaderLoad: function(e, input) {},
+    hideModal: function() {
+      oBulletinApp.Modal.hideModal();
+    }
+  });
+
+  oUserMessage.firmwareUpdateView = Marionette.ItemView.extend({
+    template: window.tpl["firmware-update-message"],
+    ui: {
+      iconClose: ".wl-icon.icon-close",
+      tierSelection: "#tierSelection"
+    },
+    events: {
+      "click @ui.iconClose": "hideModal",
+      "click @ui.tierSelection": "openTierSelect"
+    },
+    onRender: function() {},
+    showModal: function (oModalBodyView, modalClass, iDialogWidth) {
+      var oModalFooterView = new Marionette.ItemView({
+        template: false
+      });
+      wl.app.Modal.showStandardModal('', oModalBodyView,
+        oModalFooterView, modalClass, iDialogWidth);
+    },
+    openTierSelect: function () {
+      var oModalBodyView = new oUserMessage.SelectTierView({
+        cb: this.renderSelf.bind(this)
+      });
+      this.showModal(oModalBodyView, 'select-tier-modal');
+    },
+    renderSelf: function () {
+      var oModalBodyView = new oUserMessage.firmwareUpdateView();
+      var iDialogWidth = 777;
+      this.showModal(oModalBodyView, 'modal-lg user-message-modal', iDialogWidth);
+    },
+    hideModal: function() {
+      oBulletinApp.Modal.hideModal();
+    }
+  });
+
+  oUserMessage.MigrateLayoutView = Marionette.LayoutView.extend({
+    template: wl.shared.tpl["migrate-device-layout"],
+    regions: {
+      header: '#header',
+      body: '#body',
+      footer: '#footer',
+    },
+    childEvents: {
+      'layout:render': function() {
+        this.render();
+      },
+      'layout:close': function() {
+        this.close();
+      },
+      'layout:renderMigrateDeviceForm': function() {
+        this.renderMigrateDeviceForm();
+      }
+    },
+    close: function() {
+      oBulletinApp.Modal.hideModal();
+    },
+
+    onRender: function() {
+      this.showChildView('body', new wl.davis.views.MigrateDeviceMessageView());
+    },
+    renderMigrateDeviceForm: function() {
+      this.showChildView('body', new wl.davis.views.MigrateDeviceView());
+    },
+
+  });
+
+  oUserMessage.SelectTierView = wl.davis.views.ComparePlansView.extend({
+    template: wl.shared.tpl['selectTier'],
+    onRender: function () {}
+  });
+
+  oUserMessage.oFooterView = wl.davis.views.ModalStandardFooterView.extend({
+    template: window.tpl["modalFooter"],
+    onCancel: function() {
+      oBulletinApp.Modal.hideModal();
+    }
+  });
+
+  // Controller
+  oUserMessage.Controller = Marionette.Controller.extend({
+    initialize: function(options) {
+      this.messageType = options.messageType;
+    },
+    showUserMessage: function() {
+      var aBtnOptions = [];
+      var iDialogWidth = 450;
+      var modalClass = 'user-message-modal';
+
+      if (this.messageType === 'TRIAL_EXPIRED') {
+        this.oModalBodyView = new oUserMessage.trialExpiredView({});
+      } else if (this.messageType === 'MIGRATE_DEVICE' && wl.__featureFlags[
+          "MIGRATE_DEVICE"]) {
+        iDialogWidth = 1000;
+        this.oModalBodyView = new oUserMessage.MigrateLayoutView();
+      } else if (this.messageType === 'MERGE_ACCOUNT' && wl.__featureFlags[
+          "MERGE_USER"]) {
+          iDialogWidth = 800;
+          this.oModalBodyView = new wl.davis.views.MergeLayoutView({no_return: true});
+      } else if (this.messageType === 'COMPARE_PLANS') {
+          iDialogWidth = 1200;
+          this.oModalBodyView = new oUserMessage.SelectTierView();
+          modalClass = 'select-tier-modal';
+      } else if (this.messageType === 'WLIP_2020_ISSUE') {
+          iDialogWidth = 777;
+          this.oModalBodyView = new oUserMessage.firmwareUpdateView();
+      }
+
+      if (this.oModalBodyView) {
+        aBtnOptions.push({
+          btnId: oBulletinApp.Modal.CANCEL_BTN,
+          text: "close"
+        });
+        this.oModalFooterView = new oUserMessage.oFooterView(
+          aBtnOptions);
+        oBulletinApp.Modal.showStandardModal("", this.oModalBodyView,
+          this.oModalFooterView, 'modal-lg '+ modalClass, iDialogWidth);
+      }
+    },
+    // showGracePeriodInfo: function () {
+    //   // Stop module first if already started
+    //   if (oBulletinApp.oPaymentDetails) {
+    //       oBulletinApp.oPaymentDetails.stop();
+    //   }
+    //   oBulletinApp.oPaymentDetails.start();
+    // },
+    onDestroy: function() {
+      oBulletinApp.oUserMesssage.stop();
+    }
+  });
+
+  // Initializer
+  oUserMessage.addInitializer(function() {
+    oUserMessage.controller = new oUserMessage.Controller({
+      messageType: wl.__bootstrap_userMessageType
+    });
+
+    if (wl.__bootstrap_userMessageType) {
+      oUserMessage.controller.showUserMessage();
+       $.ajax({
+         type: "GET",
+         url: "/accountSubscription/markMessageAsViewed/" + wl.__bootstrap_userMessageId,
+         success: function(response) {},
+         error: function(err) {}
+       });
+    //grace period modal
+    }
+      // Due to changes in payment form, it is not a modal anymore
+      // else if (wl.__boostrap_user_subscription_daysRemaining !== -1 && !_getCookie('showGracePeriodModal')) {
+      // oUserMessage.controller.showGracePeriodInfo();
+      // _setCookie('showGracePeriodModal', 'true');
+      // }
+  });
+
+  // Finalizers
+  oUserMessage.addFinalizer(function() {
+    oUserMessage.controller.destroy();
+    delete oUserMessage.controller;
+  });
+
+  //set cookie to show grace period modal once in 24 hrs
+  function _setCookie(cname, cvalue) {
+    var dateStr = new Date(new Date().getTime() + 24 * 3600 * 1000).toUTCString();
+    var expires = "expires=" + dateStr;
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+  }
+
+  function _getCookie(cname) {
+    var matches = document.cookie.match(new RegExp(
+      "(?:^|; )" + cname.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+    ));
+    return matches ? decodeURIComponent(matches[1]) : undefined;
+  }
+});

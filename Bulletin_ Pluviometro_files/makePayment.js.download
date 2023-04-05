@@ -1,0 +1,1910 @@
+/**
+ * Created by Narinder Gaheer on 11/01/2017.
+ */
+var wl = wl || {};
+
+wl.app.module('oPayments', function (oPayments, oPaymentsApp, Backbone, Marionette, $) {
+
+  //disable cache for webview
+  if (location.pathname.indexOf('mobile') !== -1) {
+    $.ajaxSetup({ cache: false });
+  }
+
+  var PaymentModel = Backbone.Model.extend({
+    defaults: {
+      error: undefined,
+      subscriptionEndDate: dayjs(),
+      subscrOnTrialPeriod: false,
+      subscrPricePerMonth: 0,
+      company: undefined,
+      proPlusUpgradeAmount: 0,
+      paymentDetails: null,
+      cardExpired: false,
+      useSavedCard: true,
+      amountDue: 0,
+      taxDue: 0,
+      taxRate: 0,
+      beforeTax: true,
+      existingUpgrades: 1,
+      usedUpgrades: 0,
+      existingUpgradesAmountDue: 0,
+      newUgradesAmountDue: 0,
+      totalAmountDue: 0,
+      couponDiscount: null,
+      validatedAddresses: [],
+      subscriptionTerms: [],
+      newSubscriptionTermId: 1,
+      currentSubscrLengthInMonths: 12,
+      lengthInMonths: 12,
+      showUpgradesDetected: false,
+      selectedAddressIndex: 0,
+      cardholderName: null,
+      cardNumber: null,
+      expiration: null,
+      cvc: null,
+      countryId: null,
+      countryName: undefined,
+      countryCode: null,
+      address1: null,
+      city: null,
+      state: null,
+      zipCode: null,
+      couponCode: null,
+      requestTokenForm: undefined,
+      newSubscrTypeId: null,
+      userSubscriptionTypeId: null,
+      userSubscriptionTypeName: null,
+      expDate: null,
+      proPrice: 47.4,
+      proPlusPrice: 107.4,
+      subscriptionTypes: [],
+      selectedServicePlan: null,
+      trialMode: false,
+      newUpgradesAdjustmentAmount: 0,
+      numNewUpgrades: 1,
+      upgradeType: null,
+      upgradeSystemId: 0,
+      newArchivalRate: null,
+      standalone: false,
+      renewal: false,
+      taxLabel: 'Tax',
+      taxLabelInDesc: 'tax',
+      reactivateDevice: false,
+      customerCurrency: 'USD',
+      totalAmountCustomerCurrency: null,
+      paymentIntentId: null,
+      clientSecret: null
+    }
+  });
+
+  oPayments.checkIfCardExpired = function (paymentDetails) {
+    var expired = false;
+    if (paymentDetails) {
+      var expMonth = paymentDetails.expMonth;
+      var expYear = paymentDetails.expYear;
+      var currentMonth = dayjs().month() + 1;
+      var currentYear = dayjs().year()
+      expired = expYear < currentYear || (expYear === currentYear &&
+          expMonth < currentMonth);
+    }
+    return expired;
+  }
+
+  oPayments.sharedModel = new PaymentModel();
+
+  oPayments.MakePaymentView = Marionette.LayoutView.extend({
+    trialMode: false,
+    model: oPayments.sharedModel,
+    regions: {
+      fullWidthRegion: '#full-width-region',
+      mainRegion: '#main-region',
+      detailsRegion: '#details-region'
+    },
+    childEvents: {
+      'billingAddress:render': function () {
+        this.showBillingAddressForm();
+      },
+      'paymentForm:render': function () {
+        this.showPaymentForm();
+      },
+      'detectedUpgrades:render': function () {
+        this.showDetectedUpgrades();
+      },
+      'detectedUpgradesOrPaymentForm:render': function () {
+        this.showDetectedUpgradesOrPaymentForm();
+      },
+      'resellerAssociated:render': function () {
+        this.showResellerAssociated();
+      },
+      'confirm-address:render': function () {
+        this.showConfirmAddress();
+      },
+      'payment-success:render': function () {
+        this.showPaymentSuccess();
+      },
+      'subscription-select:render': function () {
+        this.showSubscriptionSelect();
+      },
+      'comparison-chart:render': function () {
+        this.showComparisonChart();
+      },
+      'addMoreSensors:render': function () {
+        this.showAddMoreSensors();
+      },
+      'cardDetails:saved': function () {
+        // pass event to parent card details view
+        this.triggerMethod('cardDetails:saved');
+      }
+    },
+    initialize: function (options) {
+      if (options.isTrial) {
+        this.trialMode = (options.isTrial && options.isTrial === 'true') ?
+          true : false;
+      }
+      this.newSubscrType = options.subscrType;
+
+      this.model.set('upgradeSystemId', Number(options.upgradeSystemId));
+      this.model.set('newArchivalRate', Number(options.newArchivalRate));
+
+      //if passed 0 as numNewUpgrades param
+      //upgrade from pro to proplus without buying an additional upgrade
+      if (options.numNewUpgrades && !_.isNaN(Number(options.numNewUpgrades)) &&
+        this.newSubscrType === "ProPlus") {
+        this.model.set('numNewUpgrades', Number(options.numNewUpgrades))
+      }
+
+      //check if user has saved card
+      this.getCreditCardProfile();
+
+      this.checkIfAssociatedWithReseller().then(function (response) {
+        if (response && response.data) {
+          this.model.set('company', response.data);
+        }
+        this.checkIfAlreadySubscribed().then(function (response) {
+          if (response.data && response.data.subscription) {
+            this.model.set('subscrOnTrialPeriod', Boolean(
+              response.data
+                .subscription.isTrialPeriod));
+
+            var alreadySubscribed = this.newSubscrType == 'Pro' &&
+              response.data.subscriptionType.userSubscriptionTypeId ==
+              2;
+
+            alreadySubscribed = alreadySubscribed || (this.newSubscrType ==
+              'ProPlus' && response.data.subscriptionType.userSubscriptionTypeId ==
+              3);
+
+            if (response.data.proPlusUpgradeAmount) {
+              this.model.set('proPlusUpgradeAmount',
+                response.data.proPlusUpgradeAmount);
+              //this.model.set('totalAmountDue', response.data.proPlusUpgradeAmount);
+            }
+
+            this.model.set('existingUpgrades', response.data.subscription
+              .numDeviceUpgrades);
+            this.model.set('userSubscriptionTypeId', response.data
+              .subscription.userSubscriptionTypeId);
+            this.model.set('userSubscriptionTypeName', response.data
+              .subscriptionType.subscriptionTypeName);
+            this.model.set('newSubscriptionTermId', response.data
+              .subscription.subscriptionTermId);
+            //this.model.set('expDate', response.data.subscription.expirationDate);
+
+            var subscriptionEnd = dayjs(response.data.subscription
+              .subscriptionEnd);
+            this.model.set('subscriptionEndDate', subscriptionEnd
+              .format('MMMM Do, YYYY'));
+            var now = dayjs();
+
+            //if not passed in url
+            if (!this.newSubscrType) {
+              this.newSubscrType = this.model.get('userSubscriptionTypeId') === 3
+                ? 'ProPlus' : 'Pro';
+            }
+
+            //if user is on Pro+ can't set Pro
+            if (this.newSubscrType == 'Pro' && this.model.get('userSubscriptionTypeId') === 3) {
+              this.newSubscrType = 'ProPlus';
+              makeChangesToUrl(this.model.get('upgradeSystemId'), this.model.get('newArchivalRate'), 3,
+                this.model.get('trialMode'));
+            }
+
+            if (this.newSubscrType == 'Pro') {
+              this.model.set('newSubscrName', 'Pro');
+              this.model.set('newSubscrTypeId', 2);
+            } else if (this.newSubscrType == 'ProPlus') {
+              this.model.set('newSubscrName', 'Pro+');
+              this.model.set('newSubscrTypeId', 3);
+            }
+
+            //load subscription types
+            this.loadSubscriptionTypes().then(function (response) {
+              var currentSubscriptionType = _.find(response, {
+                userSubscriptionTypeId: this.model.get(
+                  'userSubscriptionTypeId')
+              });
+              var currentSubscriptionTerms = _.get(
+                currentSubscriptionType,
+                'subscriptionTerms');
+              var currentSubscriptionTerm = _.find(
+                currentSubscriptionTerms, {
+                iUserSubscriptionTermId: this.model.get(
+                  'newSubscriptionTermId')
+              });
+
+              var newSubscriptionType = _.find(response, {
+                userSubscriptionTypeId: this.model.get(
+                  'newSubscrTypeId')
+              });
+              var newSubscriptionTerms = _.get(
+                newSubscriptionType, 'subscriptionTerms');
+              var subscriptionTerm =
+                _.find(newSubscriptionTerms, {
+                  iUserSubscriptionTermId: this.model.get(
+                    'newSubscriptionTermId')
+                });
+
+              //if length in months was passed as url param
+              if (options.lengthInMonths && !_.isNaN(Number(options.lengthInMonths))) {
+                subscriptionTerm = _.find(newSubscriptionTerms, {
+                  lengthInMonths: Number(options.lengthInMonths)
+                });
+
+                this.model.set('newSubscriptionTermId',
+                  subscriptionTerm.iUserSubscriptionTermId);
+              }
+
+              if (!subscriptionTerm) { //when changing subscr type
+                //find subscription term with matching length of the current term
+                subscriptionTerm = _.find(
+                  newSubscriptionTerms, {
+                  lengthInMonths: currentSubscriptionTerm && currentSubscriptionTerm
+                    .lengthInMonths || this.model.get('currentSubscrLengthInMonths')
+                });
+                //if still not found i.e current term is Basic, then select the first one available
+                if (!subscriptionTerm) {
+                  subscriptionTerm = newSubscriptionTerms[0];
+                }
+                this.model.set('newSubscriptionTermId',
+                  subscriptionTerm.iUserSubscriptionTermId);
+              }
+
+              //if no term found on current subscription
+              if (!currentSubscriptionTerm || this.model.get(
+                'userSubscriptionTypeId') === 1) { //basic user
+                currentSubscriptionTerm = subscriptionTerm;
+              }
+
+              this.model.set('currentSubscrLengthInMonths', _
+                .get(currentSubscriptionTerm,
+                  'lengthInMonths'));
+
+              //if user is on 3-year plan, can't set 1-year
+              var lengthInMonths = _.get(subscriptionTerm, 'lengthInMonths') <
+                this.model.get('currentSubscrLengthInMonths') ? this.model.get('currentSubscrLengthInMonths')
+                : _.get(subscriptionTerm, 'lengthInMonths');
+
+              //if it wasn't set on plan selection step
+              if (this.model.get('lengthInMonths') !== 36) {
+                this.model.set('lengthInMonths', lengthInMonths);
+              }
+              this.model.set('subscriptionTypes', response);
+              this.model.set('subscriptionTerms',
+                newSubscriptionTerms);
+
+              if (options.subscrType) {
+                //detect existing upgrades
+                this.showDetectedUpgradesOrPaymentForm();
+              } else {
+                //show if subscr type param is not passed
+                this.showSubscriptionSelect();
+              }
+            }.bind(this));
+          } else {
+            this.showBillingAddressForm();
+          }
+        }.bind(this));
+      }.bind(this));
+
+      this.model.set('trialMode', this.trialMode);
+    },
+    ui: {
+      $cancelPayment: '#cancel-payment',
+    },
+    template: window.tpl['makePayment'],
+    events: {
+      "click @ui.$cancelPayment": "cancelPaymentForm"
+    },
+    onRender: function () {
+    },
+    onShow: function () {
+      var $container = $('#connection-issue');
+      window.addEventListener('online', function () {
+        $container.empty();
+      });
+
+      window.addEventListener('offline', function () {
+        var connectionIssueView = new ConnectionIssueView();
+        connectionIssueView.render();
+        $container.append(connectionIssueView.$el);
+      });
+    },
+    showBillingAddressForm: function (options) {
+      this.showChildView('mainRegion', new oPayments.BillingAddressView(options));
+      if (!this.detailsRegion.hasView()) {
+        this.showChildView('detailsRegion', new oPayments.SubscriptionDetailsView());
+      }
+    },
+    showPaymentForm: function (options) {
+      this.showChildView('mainRegion', new oPayments.PaymentFormView(options));
+      if (!this.detailsRegion.hasView()) {
+        this.showChildView('detailsRegion', new oPayments.SubscriptionDetailsView());
+      }
+    },
+    showCardDetailsForm: function (options) {
+      this.showChildView('mainRegion', new oPayments.CardDetailsFormView(options));
+    },
+    showResellerAssociated: function () {
+      this.showChildView('fullWidthRegion', new ResellerAssociatedView());
+      this.hideDetailsAndMainRegions();
+    },
+    showSubscriptionSelect: function () {
+      this.showChildView('mainRegion', new oPayments.SubscriptionSelectView());
+      if (!this.detailsRegion.hasView()) {
+        this.showChildView('detailsRegion', new oPayments.SubscriptionDetailsView());
+      }
+    },
+    showDetectedUpgrades: function () {
+      this.showChildView('mainRegion', new UpgradesDetectedView());
+      if (!this.detailsRegion.hasView()) {
+        this.showChildView('detailsRegion', new oPayments.SubscriptionDetailsView());
+      }
+    },
+    showPurchaseOrUseUpgrade: function () {
+      this.showChildView('mainRegion', new PurchaseOrUseUpgradeView());
+      if (!this.detailsRegion.hasView()) {
+        this.showChildView('detailsRegion', new oPayments.SubscriptionDetailsView());
+      }
+    },
+    showConfirmAddress: function () {
+      this.showChildView('mainRegion', new oPayments.ConfirmAddressView());
+    },
+    showPaymentSuccess: function () {
+      this.showChildView('fullWidthRegion', new PaymentSuccessView());
+      this.hideDetailsAndMainRegions();
+    },
+    showComparisonChart: function () {
+      this.showChildView('mainRegion', new ComparisonChartView());
+    },
+    showDetectedUpgradesOrPaymentForm: function () {
+      //when upgrading pro to pro+
+      if (this.model.get('userSubscriptionTypeId') === 2 && this.model.get('newSubscrTypeId') === 3) {
+        this.model.set('numNewUpgrades', 0);
+      }
+      wl.app.shareCalls.getDeviceUpgrades()
+        .then(function (res) {
+          if (res) this.model.set('usedUpgrades', res.length);
+          return getAmountDue(
+            this.model.get('trialMode'),
+            this.model.get('newSubscriptionTermId'),
+            this.model.get('newSubscrTypeId'),
+            this.model.get('numNewUpgrades'))
+        }.bind(this))
+        .then(function (response) {
+          if (response.data) {
+            $('.payment-form-container').show();
+            $('.payments-loading-spinner').hide();
+            getAmountDueCallback(this.model, response.data);
+            if (!this.model.get('existingUpgrades') && !response.data.newUpgradesAdjustmentAmount) {
+              if (this.model.get('company')) {
+                this.showResellerAssociated();
+              } else {
+                this.showBillingAddressForm({upgrade: this.options.upgrade});
+              }
+            } else {
+              if (window.location.pathname.indexOf('mobile') !== -1 &&
+                (this.model.get('userSubscriptionTypeId') === this.model.get('newSubscrTypeId')) &&
+                this.model.get('currentSubscrLengthInMonths') === this.model.get('lengthInMonths') &&
+                this.model.get('usedUpgrades') < this.model.get('existingUpgrades')) {
+                this.showPurchaseOrUseUpgrade();
+              } else {
+                if (this.model.get('company')) {
+                  this.showResellerAssociated();
+                } else {
+                  this.model.set('showUpgradesDetected', true);
+                  this.showDetectedUpgrades();
+                }
+              }
+            }
+          }
+        }.bind(this))
+    },
+    showAddMoreSensors: function () {
+      this.showChildView('fullWidthRegion', new oPayments.AddMoreSensorsView());
+    },
+    getCreditCardProfile: function () {
+      var d = $.Deferred();
+      $.get('/accountSubscription/creditCardProfile', function (response) {
+        if (response.data != null) {
+          this.model.set('paymentDetails', response.data);
+          this.model.set('address1', response.data.address1);
+          this.model.set('city', response.data.city);
+          this.model.set('state', response.data.region);
+          this.model.set('zipCode', response.data.zipCode);
+          this.model.set('countryId', response.data.countryId);
+          this.model.set('cardExpired', oPayments.checkIfCardExpired(response.data));
+          this.model.set('stripePaymentMethodId', response.data.stripePaymentMethodId);
+        }
+        d.resolve(response.data);
+      }.bind(this));
+      return d.promise();
+    },
+    loadSubscriptionTypes: function () {
+      var d = $.Deferred();
+      $.get('/accountSubscription/userSubscriptionPlansPricing', function (response) {
+        if (response.data != null) {
+          d.resolve(response.data.subscriptionTypes);
+        } else {
+          d.resolve([]);
+        }
+      }.bind(this));
+      return d.promise();
+    },
+    checkIfAlreadySubscribed: function () {
+      var d = $.Deferred();
+      var self = this;
+      $.ajax({
+        type: "GET",
+        url: "/accountSubscription/currentSubscription",
+        success: function (response) {
+          d.resolve(response);
+        },
+        error: function (err) {
+        }
+      });
+      return d.promise();
+    },
+
+    checkIfAssociatedWithReseller: function () {
+      var d = $.Deferred();
+      $.ajax({
+        type: "GET",
+        url: "/accountSubscription/isUserAssociatedWithReseller",
+        success: function (response) {
+          d.resolve(response);
+        },
+        error: function (err) {
+          d.resolve(null);
+        }
+      });
+      return d.promise();
+    },
+    // submitPaymentFormFake: function (e) {
+    //   this.ui.$formSections.hide();
+    //   this.ui.$paymentSuccess.show();
+    //   return false;
+    // },
+    cancelPaymentForm: function (e) {
+      if (this.model.get('trialMode')) {
+        window.location = "/accountSubscription#confirmCancel/" + this.model.get('upgradeSystemId')
+          + "/" + this.model.get('newArchivalRate') + "/" + this.newSubscrType;
+      } else {
+        window.location = "/bulletin";
+      }
+      return false;
+    },
+    hideDetailsAndMainRegions: function () {
+      $('#main-region').hide();
+      $('#details-region').hide();
+    }
+  });
+
+  this.SubscriptionSelectView = Marionette.ItemView.extend({
+    template: window.tpl['subscription-plans-select'],
+    model: oPayments.sharedModel,
+    ui: {
+      $subscriptionTermRadio: 'input[name="subscriptionTerm"]',
+      $newSubscrTypeRadio: 'input[name="newSubscrType"]',
+      $continuePurchase: '#goToPayments',
+      $comparisonChartLink: '.comparison-chart-link'
+    },
+    events: {
+      'click button#continuePurchase': 'continuePurchase',
+      'change @ui.$subscriptionTermRadio': 'onChangeSubscriptionTerm',
+      'change @ui.$newSubscrTypeRadio': 'onChangeNewSubscrType',
+      'click @ui.$continuePurchase': 'onClickContinue',
+      'click @ui.$comparisonChartLink': 'onClickComparisonChartLink',
+    },
+    templateHelpers: function () {
+      return {
+        getTermTranslationKey: function (name) {
+          return _getTermTranslationKey(name);
+        }
+      }
+    },
+    initialize: function () {
+      if (this.model.get('newSubscrTypeId') == 2) {
+        this.model.set('totalAmountDue', this.model.get('proPrice').toFixed(
+          2));
+      } else if (this.model.get('newSubscrTypeId') == 3) {
+        this.model.set('totalAmountDue', this.model.get('proPlusPrice').toFixed(
+          2));
+      }
+      this.model.set('trialMode', false);
+      this.model.set('subscrPricePerMonth', (this.model.get(
+        'totalAmountDue') / this.model.get('lengthInMonths')).toFixed(2));
+      makeChangesToUrl(this.model.get('upgradeSystemId'), this.model.get('newArchivalRate'),
+        this.model.get('newSubscrTypeId'), this.model.get('trialMode'));
+      $('.payment-form-container').show();
+      $('.payments-loading-spinner').hide();
+    },
+    onRender: function () {
+      var subscriptionType = _.find(this.model.get('subscriptionTypes'), {
+        userSubscriptionTypeId: this.model.get('newSubscrTypeId')
+      });
+      var subscriptionTerms = _.get(subscriptionType, 'subscriptionTerms');
+      var currentTerm = _.find(subscriptionTerms, {
+        iUserSubscriptionTermId: this.model.get('newSubscriptionTermId')
+      });
+      if (!currentTerm) { //when changing subscr type
+        currentTerm = _.find(subscriptionTerms, {
+          lengthInMonths: this.model.get('lengthInMonths')
+        });
+      }
+      this.model.set('totalAmountDue', currentTerm.price.toFixed(2));
+      this.model.set('newSubscriptionTermId', currentTerm.iUserSubscriptionTermId);
+      this.model.set('subscrPricePerMonth', (this.model.get(
+        'totalAmountDue') / currentTerm.lengthInMonths).toFixed(2));
+      this.model.set('lengthInMonths', currentTerm.lengthInMonths);
+      this.model.set('subscriptionTerms', subscriptionTerms);
+    },
+    onShow: function () {
+      var price = Number($('input[name="subscriptionTerm"]:checked').attr(
+        'data-price'));
+      this.model.set('totalAmountDue', price.toFixed(2));
+    },
+    onChangeSubscriptionTerm: function (e) {
+      var $radioBtn = $(e.target);
+      var lengthInMonth = $radioBtn.attr('data-length');
+      this.model.set('newSubscriptionTermId', Number($radioBtn.val()));
+      this.model.set('lengthInMonths', Number(lengthInMonth));
+      this.render();
+    },
+    onChangeNewSubscrType: function (e) {
+      var $radioBtn = $(e.target);
+      var newSubscrTypeId = Number($radioBtn.val());
+      var newSubscrName = $radioBtn.attr('data-name');
+      this.model.set('newSubscrTypeId', newSubscrTypeId);
+      this.model.set('newSubscrName', newSubscrName);
+      this.render();
+      makeChangesToUrl(this.model.get('upgradeSystemId'), this.model.get('newArchivalRate'),
+        newSubscrTypeId, this.model.get('trialMode'));
+    },
+    onClickComparisonChartLink: function () {
+      this.triggerMethod('comparison-chart:render');
+    },
+    onClickContinue: function () {
+      this.triggerMethod('detectedUpgradesOrPaymentForm:render');
+    }
+  });
+
+  var PurchaseOrUseUpgradeView = Marionette.ItemView.extend({
+    template: window.tpl['purchase-or-use-upgrade'],
+    model: oPayments.sharedModel,
+    ui: {
+      purchaseUpgradeBtn: '#purchaseUpgrade',
+      useUpgradeBtn: '#useUpgrade',
+      cancelBtn: '#cancel',
+      paymentError: '.payment-error',
+    },
+    events: {
+      'click @ui.purchaseUpgradeBtn': 'onClickPurchaseUpgrade',
+      'click @ui.useUpgradeBtn': 'onClickUseUpgradeBtn',
+      'click @ui.cancelBtn': 'onClickCancel'
+    },
+    onClickUseUpgradeBtn: function () {
+      this.ui.paymentError.html('');
+      wl.app.shareCalls.upgradeDevice(this.model.get('upgradeSystemId')).then(
+        function (response) {
+          if (response.data) {
+            window.location.href = "/bulletin";
+          } else if (response.error) {
+            this.ui.paymentError.html(response.error.errorMessage);
+          }
+        }.bind(this))
+    },
+    onClickPurchaseUpgrade: function () {
+      if(this.model.get('company')) {
+        this.triggerMethod('resellerAssociated:render');
+      } else {
+        this.triggerMethod('detectedUpgrades:render');
+      }
+    },
+    onClickCancel: function () {
+      if (this.model.get('trialMode')) {
+        window.location = window.location.pathname + "#confirmCancel/" + this.model.get('upgradeSystemId')
+          + "/" + this.model.get('newArchivalRate') + "/" +
+          this.model.get('userSubscriptionTypeName');
+      } else {
+        window.location = "/bulletin";
+      }
+      return false;
+    }
+  });
+
+  var UpgradesDetectedView = Marionette.ItemView.extend({
+    template: window.tpl['upgrades-detected'],
+    model: oPayments.sharedModel,
+    ui: {
+      $subscriptionTermRadio: 'input[name="subscriptionTerm"]',
+      $oneYearProTooltip: '#1_year_pro_tooltip',
+      $threeYearProTooltip: '#3_year_pro_tooltip',
+    },
+    events: {
+      'click button#continuePurchase': 'continuePurchase',
+      'click button#payment-back': 'onClickBackBtn',
+      'change @ui.$subscriptionTermRadio': 'onChangeSubscriptionTerm'
+    },
+    templateHelpers: function () {
+      return {
+        getTermTranslationKey: function (name) {
+          return _getTermTranslationKey(name);
+        }
+      }
+    },
+    initialize: function () {
+      $.fn.tooltip = $.fn.tooltip.noConflict();
+    },
+    onRender: function () {
+      var tooltipTranslationKeys = ['upgrades_detected_1_year_tooltip',
+        'upgrades_detected_3_year_tooltip'
+      ];
+      var oneYearProTooltip = _.template(
+        "<div style='text-align:left; width: 300px;'><%= upgrades_detected_1_year_tooltip %></div>"
+      );
+      var threeYearProTooltip = _.template(
+        "<div style='text-align:left; width: 300px;'><%= upgrades_detected_3_year_tooltip %></div>"
+      );
+      Utils.setTooltipTitleHtml(this.ui.$oneYearProTooltip,
+        tooltipTranslationKeys, oneYearProTooltip);
+      Utils.setTooltipTitleHtml(this.ui.$threeYearProTooltip,
+        tooltipTranslationKeys, threeYearProTooltip);
+    },
+    onChangeSubscriptionTerm: function (e) {
+      var $radioBtn = $(e.target);
+      var lengthInMonth = Number($radioBtn.attr('data-length'));
+      this.model.set('newSubscriptionTermId', Number($radioBtn.val()));
+      this.model.set('lengthInMonths', lengthInMonth);
+
+      getAmountDue(this.model.get('trialMode'),
+        this.model.get('newSubscriptionTermId'),
+        this.model.get('newSubscrTypeId'),
+        this.model.get('numNewUpgrades'),
+        this.model.get('validatedAddresses')[e.target.value]
+      ).then(function (response) {
+        getAmountDueCallback(this.model, response.data);
+        this.render();
+      }.bind(this));
+    },
+    continuePurchase: function () {
+      this.model.set('showUpgradesDetected', false);
+      //this.triggerMethod('paymentForm:render');
+      //To be changed when ready
+      this.triggerMethod('billingAddress:render');
+    },
+    onClickBackBtn: function () {
+      this.model.set('showUpgradesDetected', false);
+      this.triggerMethod('subscription-select:render');
+    }
+  });
+
+  oPayments.SubscriptionDetailsView = Marionette.ItemView.extend({
+    template: window.tpl['subscription-details'],
+    model: oPayments.sharedModel,
+    initialize: function () {
+      this.model.on('change', this.customRender.bind(this));
+    },
+    onDestroy: function () {
+      this.model.off('change');
+    },
+    customRender: function () {
+      var textEl = $.parseHTML(this.template(this.model.toJSON()))[8];
+      $(this.$el).find('.info-section').replaceWith(textEl);
+    }
+  });
+
+  var ResellerAssociatedView = Marionette.ItemView.extend({
+    template: window.tpl['reseller-associated'],
+    model: oPayments.sharedModel
+  });
+
+  oPayments.BillingAddressView = Marionette.ItemView.extend({
+    template: window.tpl['billing-address-form'],
+    model: oPayments.sharedModel,
+    ui: {
+      $paymentForm: '#payment-form',
+      $paymentError: '.payment-error',
+      $formInput: '.payment-form input',
+      $country: '#country',
+      $address1: '#address1',
+      $city: '#city',
+      $state: '#state',
+      $countryInput: '.country',
+      $combobox: '.custom-combobox',
+      $zip: '#zipCode',
+      $couponCode: '#couponCode',
+      $couponRow: '#couponRow',
+      $addressSection: '.address-section',
+      $subscriptionTermRadio: 'input[name="subscriptionTerm"]',
+      $backBtn: '#payment-back',
+      $continuePurchase: "#continuePurchase",
+      $invalidAddress: "#invalid-address",
+      $continueWithInvalidAddress: "#invalid-address-continue"
+    },
+    events: {
+      "focus @ui.$formInput": "onInputFocus",
+      "input @ui.$formInput": "onInput",
+      "blur @ui.$formInput": "onInputBlur",
+      "blur @ui.$countryInput": "onBlurCountryInput",
+      "blur @ui.$couponCode": "onBlurCouponCodeInput",
+      "select @ui.$country": "onChangeCountry",
+      "keypress @ui.$countryInput": "onCountryKeyPress",
+      "change @ui.$subscriptionTermRadio": "onChangeSubscriptionTerm",
+      "click @ui.$backBtn": "onClickBackBtn",
+      "click @ui.$continuePurchase": "onClickContinue",
+      "click @ui.$continueWithInvalidAddress": "onClickContinueWithInvalidAddress"
+    },
+    templateHelpers: function () {
+      return {
+        getTermTranslationKey: function (name) {
+          return _getTermTranslationKey(name);
+        },
+        upgrade: this.options.upgrade,
+        mobile: window.location.pathname.indexOf('mobile') !== -1
+      }
+    },
+    initialize: function () {
+      this.on('external:validate-address', function () {
+        this.validateAddress();
+      });
+    },
+    onRender: function () {
+      $.validator.setDefaults({
+        ignore: ":hidden:not(.not-masked)"
+      });
+      this.oFormValidator = FORM_VALIDATOR.addressForm(this.ui.$paymentForm);
+      //load countries
+      this.loadCountries();
+      if (this.model.get('countryId') === '114' || this.model.get(
+        'countryId') === '17') {
+        this.ui.$addressSection.find('.form-group').show();
+      }
+      $('.payment-form-container').show();
+      $('.payments-loading-spinner').hide();
+    },
+    onChangeSubscriptionTerm: function (e) {
+      var $radioBtn = $(e.target);
+      var lengthInMonth = Number($radioBtn.attr('data-length'));
+      this.model.set('newSubscriptionTermId', Number($radioBtn.val()));
+      this.model.set('lengthInMonths', lengthInMonth);
+
+      getAmountDue(this.model.get('trialMode'),
+        this.model.get('newSubscriptionTermId'),
+        this.model.get('newSubscrTypeId'),
+        this.model.get('numNewUpgrades'),
+        this.model.get('validatedAddresses')[e.target.value]
+      ).then(function (response) {
+        getAmountDueCallback(this.model, response.data);
+        this.customRender.call(this);
+      }.bind(this));
+    },
+    customRender: function () {
+      var textEl = $($.parseHTML(this.template(
+        _.assign(this.model.toJSON(), this.templateHelpers())))[0]).find('.payment-info--mobile');
+      $(this.$el).find('.payment-info--mobile').replaceWith(textEl);
+    },
+    onInputFocus: function (e) {
+      $(e.target).closest('.form-group').addClass('focused');
+    },
+    onInputBlur: function (e) {
+      $(e.target).closest('.form-group').removeClass('focused');
+    },
+    onInput: function (e) {
+      this.triggerMethod('form:change');
+    },
+    onChangeCountry: function (e) {
+      var countryCode = $(e.target).find('option:selected').attr(
+        'data-code');
+      if (countryCode === "US" || countryCode === "CA") {
+        this.ui.$addressSection.find('.form-group').show();
+      } else {
+        this.ui.$addressSection.find('.form-group').hide();
+        this.ui.$addressSection.find(
+          '.form-group.country-group, .form-group.zip-code').show();
+      }
+      this.triggerMethod('form:change');
+    },
+    loadCountries: function () {
+      if (this.countriesList) {
+        this.populateCountriesList(this.countriesList);
+        return;
+      }
+      if (this.xhr && this.xhr.readyState === 1) return;
+      this.xhr = $.get('/iris/countries', function (response) {
+        if (response) {
+          this.countriesList = response;
+          this.triggerMethod('countriesList:get', response);
+          this.populateCountriesList(response);
+        }
+      }.bind(this))
+    },
+    populateCountriesList: function (countries) {
+      var $selectEl = this.ui.$country;
+      var countryId = this.model.get('countryId');
+      $selectEl.append('<option></option>');
+      _.forEach(countries, function (country) {
+        $selectEl.append('<option data-code="' +
+          country.iso2Code + '" value="' + country.countryId +
+          '">' + country.countryName + '</option>')
+      });
+      if (this.model.get('countryId')) {
+        $selectEl.val(this.model.get('countryId'));
+        $selectEl.find('option[value=' + countryId + ']').attr('selected',
+          true);
+      }
+      $selectEl.combobox();
+      var countryCode = $selectEl.find('option[value=' + countryId + ']').attr('data-code');
+      if (countryCode === "US" || countryCode === "CA") {
+        this.ui.$addressSection.find('.form-group').show();
+      } else {
+        this.ui.$addressSection.find('.form-group').hide();
+        this.ui.$addressSection.find(
+          '.form-group.country-group, .form-group.zip-code').show();
+      }
+      //$selectEl.trigger('select');
+      setTimeout(function () {
+        this.ui.$countryInput.autocomplete("enable");
+      }.bind(this));
+    },
+    onCountryKeyPress: function (e) {
+      if (e.which == 13) {
+        this.ui.$countryInput.blur()
+      }
+    },
+    onBlurCountryInput: function (e) {
+      var val = $(e.target).val();
+      if (val) {
+        var startsWithMatcher = new RegExp("^" + val, "i"),
+            option = this.ui.$country.children("option").filter(function(i, elem) {
+              return startsWithMatcher.test(elem.label || elem.value || elem);
+            }).first()
+        option.attr('selected', true);
+        this.ui.$countryInput.val(option.text());
+      }
+      if (!Utils.isIE()) {
+        $('.ui-menu:not(:hidden) .ui-menu-item-wrapper').first().click();
+      }
+      if (this.oFormValidator.element(this.ui.$countryInput)) {
+        this.ui.$combobox.find('.help-block').remove();
+      }
+    },
+    onBlurCouponCodeInput: function (e) {
+      if (e.target.value === "") {
+        this.oFormValidator.element(this.ui.$couponCode);
+      }
+    },
+    validateAddress: function () {
+      if (this.oFormValidator.form()) {
+        this.triggerMethod('processing:start');
+        this.$loadingIcon = $('.loading-icon');
+        this.ui.$paymentError.html("");
+        this.ui.$continuePurchase.prop('disabled', true);
+        this.$loadingIcon.show();
+        var self = this;
+        var countryId = this.ui.$country.val();
+        var $selectedOption = this.ui.$country.find('option[value="' +
+          countryId + '"]');
+        if (!$selectedOption.length) {
+          this.oFormValidator.showErrors({
+            country: "<span data-l10n-id='country_select_required'></span>"
+          });
+          this.ui.$continuePurchase.prop('disabled', false);
+          return;
+        }
+        var countryCode = $selectedOption.attr('data-code');
+        this.model.set('countryId', countryId);
+        this.model.set('countryCode', countryCode);
+        this.model.set('countryName', $selectedOption.text());
+        this.model.set('address1', this.ui.$address1.val());
+        this.model.set('city', this.ui.$city.val());
+        this.model.set('state', this.ui.$state.val());
+        this.model.set('zipCode', this.ui.$zip.val());
+        this.model.set('couponCode', this.ui.$couponCode.val());
+
+        var billingAddress = {
+          countryCode: countryCode,
+          zipCode: this.model.get('zipCode')
+        };
+
+        var url = '/accountSubscription/validateAddress';
+
+        // if (this.model.get('standalone')) {
+        //   url = '/deviceSubscription/validateAddress';
+        //   var $submitBtn = $('#submit')
+        //   var $loadingIcon = $('.loading-icon');
+        //   $submitBtn.prop('disabled', 'disabled');
+        //   $loadingIcon.show();
+        // }
+
+        self.ui.$invalidAddress.hide();
+
+        if (countryCode === 'US' || countryCode === 'CA') {
+          billingAddress.address1 = this.model.get('address1');
+          billingAddress.city = this.model.get('city');
+          billingAddress.state = this.model.get('state');
+
+          $.ajax({
+            type: "POST",
+            url: url,
+            contentType: 'application/json',
+            data: JSON.stringify(billingAddress),
+            success: function (response) {
+              if (response.data) {
+                if (response.data.length > 0) {
+                  self.model.set('validatedAddresses', response.data);
+                  self.triggerMethod('confirm-address:render', self.model.attributes);
+                }
+              } else if (response.error) {
+                var errorObj;
+                try {
+                  errorObj = JSON.parse(response.error.errorMessage);
+                } catch (e) {
+                  errorObj = response.error.errorMessage;
+                }
+
+                if(errorObj === 'INVALID_ADDRESS' || errorObj.error === 'INVALID_ADDRESS' || errorObj.error.errorMessage === 'INVALID_ADDRESS'){
+                    self.ui.$invalidAddress.show();
+                }else{
+                  self.ui.$paymentError.html(errorObj.error && errorObj.error
+                    .message || errorObj);
+                }
+                self.ui.$continuePurchase.prop('disabled', false);
+                self.triggerMethod('processing:stop');
+                self.$loadingIcon.hide();
+              }
+            },
+            error: function (response) {
+              console.log(response);
+            }
+          })
+        } else { //not us or canada
+          this.model.set('validatedAddresses', [billingAddress]);
+          this.triggerMethod('confirm-address:render', this.model.attributes);
+        }
+      }
+    },
+    onClickContinue: function () {
+      var self = this;
+      var couponCode = this.ui.$couponCode.val();
+      if (couponCode) {
+        self.ui.$paymentError.html('');
+        $.ajax({
+          type: 'POST',
+          url: '/accountSubscription/applyCouponCode',
+          data: {couponCode: couponCode},
+          success: function (res) {
+            if (res.data) {
+              self.validateAddress();
+            } else if (res.error) {
+                self.ui.$paymentError.html(res.error.errorMessage);
+            }
+          },
+          error: function (err) {
+            self.ui.$paymentError.html(err.responseText);
+          }
+        });
+      } else {
+        this.validateAddress();
+      }
+    },
+
+    onClickContinueWithInvalidAddress : function(){
+        var countryId = this.ui.$country.val();
+        var $selectedOption = this.ui.$country.find('option[value="' +
+          countryId + '"]');
+        var countryCode = $selectedOption.attr('data-code');
+        var billingAddress = {
+          countryCode: countryCode,
+          zipCode: this.model.get('zipCode')
+        };
+
+        if (countryCode === 'US' || countryCode === 'CA') {
+          billingAddress.address1 = this.model.get('address1');
+          billingAddress.city = this.model.get('city');
+          billingAddress.state = this.model.get('state');
+        }
+
+      //special indicator to avalara to use zip code for taxation purposes as exact
+      //street address is not found in Avalara
+      billingAddress.address2 = "Local Delivery";
+      this.model.set('validatedAddresses', [billingAddress]);
+      this.triggerMethod('confirm-address:render', this.model.attributes);
+    },
+
+    onClickBackBtn: function () {
+      if (this.options.upgrade) {
+        window.location.href = '/bulletin';
+        return;
+      }
+      if (!this.model.get('existingUpgrades') && !this.model.get('newUpgradesAdjustmentAmount')) {
+        this.triggerMethod('subscription-select:render');
+      } else {
+        this.triggerMethod('detectedUpgradesOrPaymentForm:render');
+      }
+    },
+    onDestroy: function () {
+      this.off('external:validate-address');
+    }
+  });
+
+  oPayments.PaymentFormView = Marionette.ItemView.extend({
+    template: window.tpl['payment-form'],
+    model: oPayments.sharedModel,
+    initialize: function (options) {
+       wl.app.stripe = Stripe(wl.stripePublisherKey);
+      if (options.model) {
+        this.model = new PaymentModel(
+          _.assign(oPayments.sharedModel.attributes, options.model.attributes));
+      }
+      if (options.standalone) {
+        this.model.set('standalone', options.standalone)
+      }
+      this.model.set('beforeTax', true);
+    },
+    ui: {
+      $paymentForm: '#payment-form',
+      $paymentError: '.payment-error',
+      $formInput: '.payment-form input',
+      $useSavedLink: '.use-saved, .use-saved--mobile',
+      $enterNewCardLink: '.saved-card-link',
+      $cardNumber: '#cardNumber',
+      $cardExp: '#expiration',
+      $cardCvc: '#cvc',
+      $couponCode: '#couponCode',
+      $couponRow: '#couponRow',
+      $newCardBlocks: '#payment-form-buttons, ' +
+        '.credit-card-section, .use-saved, .use-saved--mobile',
+      $savedCardBlocks: '#saved-card-buttons, #saved-card',
+      $subscriptionTermRadio: 'input[name="subscriptionTerm"]',
+      $submitPaymentBtn: '.submitPayment',
+      $paymentProcessing: '#paymentProcessing',
+      submit: '.submitPayment',
+      errorBlock: '.payment-error',
+      loadingIcon: '.loading-icon'
+    },
+    events: {
+      "blur @ui.$couponCode": "onBlurCouponCodeInput",
+      "click @ui.$useSavedLink": "showSavedCard",
+      "click @ui.$enterNewCardLink": "showPaymentForm",
+      "click button#submitPayment": "submitPaymentForm",
+      "click button#submitPaymentSaved": "submitPaymentFormSaved",
+      "click button#payment-back, button#payment-back-saved": "onClickBackBtn",
+    },
+    templateHelpers: function () {
+      return {
+        getTermTranslationKey: function (name) {
+          return _getTermTranslationKey(name);
+        },
+        upgrade: this.options.upgrade      
+      }
+    },
+    onRender: function () {
+      $.validator.setDefaults({
+        ignore: ":hidden:not(.not-masked)"
+      });
+      if (this.model.get('paymentDetails') && this.model.get('stripePaymentMethodId')
+        && this.model.get('useSavedCard')) {
+        this.showSavedCard();
+      } else {
+        this.showPaymentForm();
+      }
+      $('.payment-form-container').show();
+      $('.payments-loading-spinner').hide();
+    },
+    onShow: function () {
+      initializeStripeElements(this);
+    },
+    showSavedCard: function () {
+      this.ui.$newCardBlocks.hide();
+      this.ui.$savedCardBlocks.show();
+      this.model.set('useSavedCard', true);
+      this.triggerMethod('useSavedCardOption:change', true);
+    },
+    showPaymentForm: function () {
+      this.ui.$newCardBlocks.show();
+      this.ui.$savedCardBlocks.hide();
+      this.model.set('useSavedCard', false);
+      this.triggerMethod('useSavedCardOption:change', false);
+    },
+    getSetupIntent: function () {
+      var d = $.Deferred();
+      $.ajax({
+        type: 'GET',
+        url: '/accountSubscription/setupIntent',
+        success: function (response) {
+          d.resolve(response);
+        },
+        error: function (err) {
+          d.resolve(null);
+        }
+      });
+      return d.promise();
+    },
+    setupCardPaymentMethod: function (stripePaymentMethodId, isTrial, zeroAmount) { //used for trial and amount = 0
+      var self = this;
+      this.getSetupIntent().then(function(response) {
+        if (response && response.data) {
+          console.log(`got payment intent ${response}`);
+          self.clientSecret = response.data.clientSecret;
+          self.setupIntent = response.data.setupIntent;
+          wl.app.stripe.confirmCardSetup(self.clientSecret, {
+            payment_method: stripePaymentMethodId ? stripePaymentMethodId : {
+              card: self.cardNumber
+            }
+          }).then(function (result) {
+            // Handle result.error or result.setupIntent
+            if (result.setupIntent) {
+              self.model.set('stripePaymentMethodId', result.setupIntent.payment_method);
+              self.postPayment(isTrial, zeroAmount);
+            } else if (result.error) {
+              self.ui.$paymentError.html(result.error.message);
+              self.ui.$submitPaymentBtn.prop('disabled', false);
+              self.ui.loadingIcon.hide();
+              self.ui.$paymentProcessing.hide();
+            }
+          });
+        }
+      });
+    },
+    payWithCard: function (stripePaymentMethodId) {
+      this.ui.$paymentError.html("");
+      // Disable the submit button to prevent repeated clicks:
+      this.ui.$submitPaymentBtn.prop('disabled', true);
+      this.ui.$paymentProcessing.show();
+      this.ui.loadingIcon.show();
+      var clientSecret = this.model.get('clientSecret');
+      var card = this.cardNumber;
+      if (this.model.get('trialMode')) {
+        this.setupCardPaymentMethod(stripePaymentMethodId, true);
+      } else if (clientSecret) { // amount > 0
+        wl.app.stripe
+          .confirmCardPayment(clientSecret, {
+            payment_method: stripePaymentMethodId ? stripePaymentMethodId : {
+              card: card
+            }
+          })
+          .then(function (result) {
+            if (result.error) {
+              // Show error to your customer
+              //showError(result.error.message);
+              console.log(result.error.message);
+              this.ui.$paymentError.html(result.error.message);
+              this.ui.$submitPaymentBtn.prop('disabled', false);
+              this.ui.loadingIcon.hide();
+              this.ui.$paymentProcessing.hide();
+            } else if (result.paymentIntent) {
+              // The payment succeeded!
+              this.model.set('stripePaymentMethodId', result.paymentIntent.payment_method);
+              this.model.set('paymentIntentId', result.paymentIntent.id);
+              if (this.model.get('renewal')) {
+                this.renewSubscription();
+              } else {
+                this.postPayment();
+              }
+              console.log(`stripe response ${JSON.stringify(result)}` )
+              console.log("payment success")
+            }
+          }.bind(this));
+      } else { //amount is 0 due to coupon code
+        this.setupCardPaymentMethod(stripePaymentMethodId, false, true);
+      }
+    },
+    onBlurCouponCodeInput: function (e) {
+      if (e.target.value === "") {
+        this.oFormValidator.element(this.ui.$couponCode);
+      }
+    },
+    submitPaymentForm: function () {
+      this.payWithCard();
+      return false;
+    },
+    submitPaymentFormSaved: function () {
+      this.payWithCard(this.model.get('stripePaymentMethodId'));
+      return false;
+    },
+    postPayment: function (isTrial, zeroAmount) { // coupon code
+      var url = isTrial ? '/accountSubscription/postTrialSubscription' :
+        '/accountSubscription/postPayment/' + this.model.get('paymentIntentId');
+      if (zeroAmount) {
+        url = '/accountSubscription/postPayment';
+      }
+      var self = this;
+      var data = {
+        numNewUpgrades: this.model.get('numNewUpgrades'),
+        newSubscriptionTermId: this.model.get('newSubscriptionTermId'),
+        newSubscriptionType: this.model.get('newSubscrTypeId'),
+        isTrial: this.model.get('trialMode'),
+        billingAddress: this.model.get('validatedAddresses')[0],
+        paymentMethodId: this.model.get('stripePaymentMethodId')
+      };
+      if (this.model.get('couponCode')) {
+        data.couponCode = this.model.get('couponCode');
+      }
+      $.ajax({
+        type: "POST",
+        url: url,
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function (response) {
+          if (response.data) {
+            console.log(response.data);
+            onPaymentSuccess.call(self, response);
+          } else if (response.error) {
+            self.ui.$paymentError.html(response.error.errorDetail || response.error.errorMessage);
+            self.ui.$submitPaymentBtn.prop('disabled', false);
+            self.ui.$paymentProcessing.hide();
+          }
+        },
+        error: function (err) {
+          self.ui.$paymentError.html(err.responseText);
+          self.ui.$submitPaymentBtn.prop('disabled', false);
+          self.ui.$paymentProcessing.hide();
+        }
+      });
+    },
+    renewSubscription: function () {
+      var self = this;
+      $.ajax({
+        type: "GET",
+        url: '/accountSubscription/renewSubscription/' + this.model.get('paymentIntentId'),
+        success: function (response) {
+          if (response) {
+            console.log(response);
+            self.triggerMethod('renewal-success:render');
+          } else if (response.error) {
+            self.ui.$paymentError.html(response.error.errorDetail || response.error.errorMessage);
+            self.ui.$submitPaymentBtn.prop('disabled', false);
+            self.ui.$paymentProcessing.hide();
+          }
+        },
+        error: function (err) {
+          self.ui.$paymentError.html(err.responseText);
+          self.ui.$submitPaymentBtn.prop('disabled', false);
+          self.ui.$paymentProcessing.hide();
+        }
+      });
+    },
+    onClickBackBtn: function () {
+      if (this.options.upgrade || this.model.get('renewal')) {
+        window.location.href = '/bulletin';
+        return;
+      }
+      this.triggerMethod('confirm-address:render', this.model.attributes);
+      this.triggerMethod('external:confirm-address:render', this.model.attributes);
+    }
+  });
+
+  //account and mobile card details
+  oPayments.CardDetailsFormView = oPayments.BillingAddressView.extend({
+    template: window.tpl['card-details-form'],
+    ui: _.extend({}, oPayments.BillingAddressView.prototype.ui, {
+      $useSavedLink: '.use-saved, .use-saved--mobile',
+      $enterNewCardLink: '.saved-card-link',
+      $cardNumber: '#accountCardNumber',
+      $cardExp: '#accountCardExpiration',
+      $cardCvc: '#accountCardCvc',
+      $newCardBlocks: '#payment-form-buttons, ' +
+        '.credit-card-section, .use-saved, .use-saved--mobile',
+      $savedCardBlocks: '#saved-card-buttons, #saved-card',
+	}),
+    events: {
+      "focus @ui.$formInput": "onInputFocus",
+      "input @ui.$formInput": "onInput",
+      "blur @ui.$formInput": "onInputBlur",
+      "blur @ui.$countryInput": "onBlurCountryInput",
+      "select @ui.$country": "onChangeCountry",
+      "keypress @ui.$countryInput": "onCountryKeyPress",
+      "click @ui.$useSavedLink": "showSavedCard",
+      "click @ui.$enterNewCardLink": "showPaymentForm",
+      "click @ui.$continueWithInvalidAddress": "continueWithInvalidAddress",
+    },
+    initialize: function (options) {
+      if (this.options.stripeKey) {
+        wl.app.stripe = Stripe(this.options.stripeKey);
+      }
+      if (options.model) {
+        this.model = new Backbone.Model(options.model.attributes);
+      }
+      if (options.standalone) {
+        this.model.set('standalone', options.standalone)
+      }
+      this.on('external:save-card-details', this.saveCardDetails.bind(this));
+    },
+    onRender: function () {
+      $.validator.setDefaults({
+        ignore: ":hidden:not(.not-masked)"
+      });
+      this.oFormValidator = FORM_VALIDATOR.addressForm(this.ui.$paymentForm);
+      this.loadSetupIntent();
+      if (this.model.get('paymentDetails') && this.model.get('stripePaymentMethodId')
+        && this.model.get('useSavedCard')) {
+        this.showSavedCard();
+      } else {
+        this.showPaymentForm();
+      }
+      //load countries
+      this.loadCountries();
+      if (this.model.get('countryId') === '114' || this.model.get(
+        'countryId') === '17') {
+        this.ui.$addressSection.find('.form-group').show();
+      }
+      //setup external ui elements
+      this.$submitBtn = $('#submit');
+      this.$loadingIcon = $('.loading-icon');
+      this.$cardSavedMsg = $('.credit-card-saved-msg');
+
+      setTimeout(function () {
+        initializeStripeElements(this);
+        console.log("initialized card element");
+      }.bind(this), 100);
+    },
+    showSavedCard: function () {
+      this.ui.$newCardBlocks.hide();
+      this.ui.$savedCardBlocks.show();
+      this.model.set('useSavedCard', true);
+      this.triggerMethod('useSavedCardOption:change', true);
+    },
+    showPaymentForm: function () {
+      this.ui.$newCardBlocks.show();
+      this.ui.$savedCardBlocks.hide();
+      this.model.set('useSavedCard', false);
+      this.triggerMethod('useSavedCardOption:change', false);
+    },
+    loadSetupIntent: function () {
+      $.get('/accountSubscription/setupIntent', function (response) {
+        if (response && response.data) {
+          console.log(`got payment intent ${response}`);
+          this.clientSecret = response.data.clientSecret;
+          this.setupIntent = response.data.setupIntent;
+          this.$submitBtn.prop('disabled', false);
+          this.$loadingIcon.hide();
+        }
+      }.bind(this))
+    },
+    confirmCardSetup: function (bypassAddressValidation) {
+      var self = this;
+      var countryCode = this.model.get('countryCode');
+      var billingAddress = {
+        countryCode: countryCode,
+        zipCode: this.model.get('zipCode')
+      };
+
+      if (countryCode === 'US' || countryCode === 'CA') {
+        billingAddress.address1 = this.model.get('address1');
+        billingAddress.city = this.model.get('city');
+        billingAddress.state = this.model.get('state');
+        if(bypassAddressValidation){
+          billingAddress.address2 = "Local Delivery";
+        }
+      }
+      
+      if (this.model.get('useSavedCard') && this.model.get('paymentDetails') 
+          && this.model.get('stripePaymentMethodId')) {
+        this.processSavePaymentMethod(this.model.get('paymentDetails').stripePaymentMethodId, billingAddress);
+      } else {
+        var d = $.Deferred();
+        //we already have a saved Payment method from prior success and we are in "continueWithBadAddress" mode
+        if(self.savedPaymentMethod){
+          d.resolve(self.savedPaymentMethod);
+        }else{
+            wl.app.stripe.confirmCardSetup(this.clientSecret, {
+              payment_method: {
+                card: this.cardNumber
+              }
+            }).then(function(result){
+              if (result.setupIntent) {
+                self.savedPaymentMethod = result.setupIntent.payment_method;
+                d.resolve(result.setupIntent.payment_method);
+              } else if (result.error) {
+                  self.ui.$paymentError.html(result.error.message);
+                  self.$submitBtn.prop('disabled', false);
+                  self.$loadingIcon.hide();
+              }
+            });
+        }
+
+        d.promise().then(function(payment_method){
+            self.processSavePaymentMethod(payment_method, billingAddress);
+
+          // Handle result.error or result.setupIntent
+        }.bind(this));
+      }
+    },
+    continueWithInvalidAddress: function(){
+      this.confirmCardSetup(true);
+    },
+    processSavePaymentMethod: function (paymentMethodId, billingAddress) {
+      var self = this;
+      self.ui.$invalidAddress.hide();
+      $.ajax({
+        type: "POST",
+        url: '/accountSubscription/savePaymentMethod?paymentMethodId='
+          + paymentMethodId,
+        contentType: 'application/json',
+        data: JSON.stringify(billingAddress),
+        success: function (response) {
+          if (response.error) {
+            if(response.error.errorMessage === 'INVALID_ADDRESS'){
+              self.ui.$invalidAddress.show();
+            }else{
+              self.ui.$paymentError.html(response.error.errorMessage);
+            }
+
+            if (self.$submitBtn && self.$loadingIcon) {
+              self.$submitBtn.prop('disabled', false);
+              self.$loadingIcon.hide();
+            }
+          } else {
+            if (!self.model.get('useSavedCard')) {
+              // load new intent for next save calls
+              self.loadSetupIntent();
+              self.model.set('paymentDetails', response);
+              self.model.set('stripePaymentMethodId', response.stripePaymentMethodId);
+              self.model.set('useSavedCard', true);
+              self.render();
+            } else {
+              self.$submitBtn.prop('disabled', false);
+              self.$loadingIcon.hide();
+            }
+            self.$cardSavedMsg.show();
+            setTimeout(function () {
+              self.$cardSavedMsg.hide();
+            }, 3000);
+            self.triggerMethod('cardDetails:saved');
+          }
+        },
+        error: function (response) {
+          console.log(response);
+        }
+      });
+    },
+    saveCardDetails: function () {
+      if (this.oFormValidator.form()) {
+        this.ui.$paymentError.html("");
+        var countryId = this.ui.$country.val();
+        var $selectedOption = this.ui.$country.find('option[value="' +
+          countryId + '"]');
+        if (!$selectedOption.length) {
+          this.oFormValidator.showErrors({
+            country: "<span data-l10n-id='country_select_required'></span>"
+          });
+          return;
+        }
+        var countryCode = $selectedOption.attr('data-code');
+        this.model.set('countryId', countryId);
+        this.model.set('countryCode', countryCode);
+        this.model.set('countryName', $selectedOption.text());
+        this.model.set('address1', this.ui.$address1.val());
+        this.model.set('city', this.ui.$city.val());
+        this.model.set('state', this.ui.$state.val());
+        this.model.set('zipCode', this.ui.$zip.val());
+
+        this.$submitBtn.prop('disabled', 'disabled');
+        this.$loadingIcon.show();
+
+        this.confirmCardSetup();
+      }
+    },
+    onDestroy: function () {
+      this.off('external:save-card-details');
+    }
+  });
+
+  oPayments.ConfirmAddressView = Marionette.ItemView.extend({
+    template: window.tpl['confirm-address'],
+    model: oPayments.sharedModel,
+    ui: {
+      $confirmAddressBtn: '#confirmAddressBtn, #submit',
+      $confirmedAddressRadio: 'input[name="confirmed_address"]',
+      $paymentError: '.payment-error',
+      $backBtn: '#payment-back, #back',
+      $loadingIcon: '.loading-icon'
+    },
+    events: {
+      'click @ui.$confirmAddressBtn': 'onClickConfirmAddress',
+      'change @ui.$confirmedAddressRadio': 'onChangeConfirmedAddress',
+      'click @ui.$backBtn': 'onClickBack'
+    },
+    onChangeConfirmedAddress: function (e) {
+      var selectedIndex = e.target.value;
+      this.model.set('selectedAddressIndex', selectedIndex);
+    },
+    onClickConfirmAddress: function () {
+      if (this.model.get('standalone')) {
+        this.getAmountWithTaxByOrderId.call(this);
+      } else {
+        this.getAmountDueWithTax.call(this);
+      }
+    },
+    getAmountDueWithTax: function () {
+      this.ui.$confirmAddressBtn.prop('disabled', true);
+      this.ui.$loadingIcon.show();
+      getAmountDue(
+        this.model.get('trialMode'),
+        this.model.get('newSubscriptionTermId'),
+        this.model.get('newSubscrTypeId'),
+        this.model.get('numNewUpgrades'),
+        this.model.get('validatedAddresses')[this.model.get('selectedAddressIndex')],
+        this.model.get('couponCode'),
+      ).then(function (response) {
+        if (response.data) {
+          getAmountDueCallback(this.model, response.data);
+          this.model.set('beforeTax', false);
+          //when coupon code field is not empty
+          if (this.model.get('couponCode') && response.data.couponDiscount == null) {
+            this.ui.$paymentError.html("<span data-l10n-id='invalid_coupon_code'></span>");
+            this.ui.$confirmAddressBtn.prop('disabled', false);
+            this.ui.$loadingIcon.hide();
+          } else {
+            this.triggerMethod('paymentForm:render');
+          }
+          //show confirm address and taxes
+        } else if (response.error) {
+          this.ui.$paymentError.html(response.error.errorMessage);
+          this.ui.$confirmAddressBtn.prop('disabled', false);
+          this.ui.$loadingIcon.hide();
+          console.log(response);
+        }
+      }.bind(this));
+    },
+    getAmountWithTaxByOrderId: function () {
+      this.ui.$paymentError.text('');
+      this.ui.$confirmAddressBtn.prop('disabled', 'disabled');
+      this.ui.$loadingIcon.show();
+      var data = {
+        orderId: this.model.get('orderId'),
+        billingAddressInfo: this.model.get('validatedAddresses')[this.model.get('selectedAddressIndex')]
+      }
+      if (this.model.get('paymentDetails')) {
+        data.cardProfileId = this.model.get('paymentDetails').id;
+      }
+      getTaxAmount(data);
+      var self = this;
+      function getTaxAmount(data) {
+        $.ajax({
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify(data),
+          url: '/deviceSubscription/amountDueWithTaxes',
+          success: function (response) {
+            console.log(response)
+            if (response.data) {
+              self.model.set('totalAmountDue', response.data.totalAmountDue);
+              self.model.set('taxDue', response.data.taxDue);
+              self.model.set('taxRate', response.data.appliedTaxRate);
+              self.model.set('reactivationFeeDetail', response.data.reactivationFeeDetail);
+              self.model.set('customerCurrency', response.data.customerCurrency);
+              self.model.set('totalAmountCustomerCurrency', response.data.totalAmountCustomerCurrency);
+              self.model.set('renewalDate',  dayjs(response.data.subscriptionEndDate).format('ll'));
+              self.model.set('paymentIntentId', response.data.paymentIntentId);
+              self.model.set('clientSecret', response.data.clientSecret);
+              self.triggerMethod('paymentForm:render', self.model.attributes);
+            } else {
+              self.ui.$paymentError.text(response.error.errorMessage);
+              self.ui.$confirmAddressBtn.prop('disabled', false);
+              self.ui.$loadingIcon.hide();
+            }
+          }.bind(this),
+          error: function (err) {
+            self.ui.$confirmAddressBtn.prop('disabled', false);
+            self.ui.$loadingIcon.hide();
+            console.log(err);
+          }
+        });
+      }
+    },
+    onClickBack: function () {
+      this.triggerMethod('billingAddress:render');
+    }
+  });
+
+  var PaymentSuccessView = Marionette.ItemView.extend({
+    template: window.tpl['payment-success'],
+    model: oPayments.sharedModel,
+    ui: {
+      'gotIt': '#gotIt'
+    },
+    events: {
+      'click @ui.gotIt': 'onClickGotIt'
+    },
+    templateHelpers: function () {
+      return {
+        isMobile: window.location.pathname.indexOf('mobile') !== -1
+      }
+    },
+    onClickGotIt: function () {
+      if (window.location.pathname.indexOf('mobile') !== -1) {
+        window.location.href = '/bulletin'
+      } else {
+        if(sessionStorage.getItem('showAddMoreSensors')) {
+          sessionStorage.removeItem("showAddMoreSensors");
+          this.triggerMethod('addMoreSensors:render');
+        } else {
+          window.location.href = '/bulletin'
+        }
+      }
+    }
+  });
+
+  var ComparisonChartView = Marionette.ItemView.extend({
+    template: window.tpl['comparison-chart'],
+    ui: {
+      'featureRow': '.comparison-chart-feature-row:not(.empty)',
+      'featureName': '.feature-name',
+      'featureDesc': '.feature-desc',
+      'close': 'button.btn-payment-primary',
+      'historical_data_tooltip': '#historical-data-tooltip',
+      'bulletin_tooltip': '#bulletin-tooltip',
+      'map_tooltip': '#map-tooltip',
+      'chart_tooltip': '#chart-tooltip',
+      'data_tooltip': '#data-tooltip',
+      'mobilize_tooltip': '#mobilize-tooltip',
+      'ipm_tooltip': '#ipm-tooltip',
+      'pro_shares_tooltip': '#pro-shares-tooltip',
+      'third_party_intervals_tooltip': '#third-party-intervals-tooltip'
+    },
+    events: {
+      'click @ui.featureRow': 'onClickFeatureRow',
+      'click @ui.close': 'onClickClose'
+    },
+    onRender: function () {
+      this.setTooltipTitles();
+    },
+    setTooltipTitles: function () {
+      var self = this;
+      var promises = [];
+      var tooltipTranslationKeys = [
+        'historical_data_tooltip',
+        'bulletin_tooltip',
+        'map_tooltip',
+        'chart_tooltip',
+        'data_tooltip',
+        'mobilize_tooltip',
+        'ipm_tooltip',
+        'pro_shares_tooltip',
+        'third_party_intervals_tooltip'
+      ];
+      _.each(tooltipTranslationKeys, function (key) {
+        var prom = document.l10n.formatValue(key);
+        promises.push(prom);
+      });
+      Promise.all(promises).then(function (values) {
+        _.forEach(values, function (value, i) {
+          if (self.ui[tooltipTranslationKeys[i]]) {
+            self.ui[tooltipTranslationKeys[i]].attr(
+              'data-original-title',
+              '<div class="">' +
+              values[i] + '</div>');
+            self.ui[tooltipTranslationKeys[i]].tooltip();
+            $('.tooltip:visible').hide();
+          }
+        });
+      });
+    },
+    onClickFeatureRow: function (e) {
+      this.ui.featureRow.removeClass('selected');
+      var row = $(e.target);
+      if (e.target !== e.currentTarget) {
+        row = $(e.target).closest('.comparison-chart-feature-row')
+      }
+
+      row.addClass('selected');
+      var featureDesc = row.find('.icon-faq').attr('data-original-title');
+      var featureName = row.find('span').text();
+      this.ui.featureName.text(featureName);
+      this.ui.featureDesc.html(featureDesc);
+    },
+    onClickClose: function () {
+      this.triggerMethod('subscription-select:render');
+    }
+  });
+
+  var ConnectionIssueView = Marionette.ItemView.extend({
+    template: window.tpl['connection-issue'],
+    ui: {
+      retry: '#connection-issue__retry'
+    },
+    events: {
+      'click @ui.retry': 'onClickRetry'
+    },
+    onClickRetry: function () {
+      if (navigator.onLine) {
+        $('#connection-issue').empty();
+        $('.btn-payment-primary').prop('disabled', false);
+      }
+    }
+  });
+
+  oPayments.AddMoreSensorsView = Marionette.ItemView.extend({
+    template: window.tpl['add-more-sensors'],
+    ui: {
+      'submit': '#submit',
+      'finish': '#back'
+    },
+    events: {
+      'click @ui.submit': 'onClickAddMore',
+      'click @ui.finish': 'onClickFinish'
+    },
+    initialize: function (options) {
+    },
+    onClickAddMore: function () {
+      sessionStorage.setItem("loadDeviceConfig", true);
+      var identifier = this.options.deviceIdentifier || wl.deviceIdentifier || wl.lastViewedSystemId;
+
+      window.location.replace(
+        "/manageDevices/enviroMonitorConfiguration/" + identifier
+      );
+    },
+    onClickFinish: function () {
+      window.location.href = '/bulletin/' + this.options.deviceIdentifier;
+    }
+  });
+
+  function onPaymentSuccess(response) {
+    console.log("response success");
+    console.log(response);
+    if (response.data) {
+      this.triggerMethod('payment-success:render');
+      if (this.model.get('trialMode')) {
+        gtag('event', 'proTrialUpgrade');
+      } else {
+        gtag('event', 'proUpgrade');
+      }
+    } else if (response.error) {
+      this.ui.$paymentError.html(response.error.errorDetail || response.error.errorMessage);
+      this.ui.$submitPaymentBtn.prop('disabled', false);
+    }
+    $('#paymentProcessing').hide();
+  }
+
+  function getAmountDue(isTrial, newSubscriptionTermId, subscrTypeId,
+    numNewUpgrades, billingAddress, couponCode) {
+    var d = $.Deferred();
+    var url = "/accountSubscription/amountDue";
+    var data = {
+      numNewUpgrades: numNewUpgrades,
+      newSubscriptionTermId: newSubscriptionTermId,
+      newSubscriptionType: subscrTypeId,
+      isTrial: isTrial
+    };
+
+    if (couponCode) {
+      data.couponCode = couponCode;
+    }
+
+    if (billingAddress) {
+      data.billingAddress = billingAddress;
+      url = "/accountSubscription/amountDueWithTaxes";
+    }
+    $.ajax({
+      type: "POST",
+      contentType: 'application/json',
+      data: JSON.stringify(data),
+      url: url,
+      success: function (response) {
+        d.resolve(response);
+      },
+      error: function (err) {
+        console.log(err);
+      }
+    });
+    return d.promise();
+  }
+
+  function getAmountDueCallback(model, data) {
+    var totalAmountDue = data.totalAmountDue.toFixed(2);
+    var newUgradesAmountDue = data.newUgradesAmountDue.toFixed(2);
+    var existingUpgradesAmountDue = data.existingUpgradesAmountDue.toFixed(2);
+    var subscrPricePerMonth = (totalAmountDue / model.get('lengthInMonths')).toFixed(
+      2);
+    var taxDue = data.taxDue ? data.taxDue.toFixed(2) : 0;
+    var couponDiscount = data.couponDiscount ? data.couponDiscount.toFixed(2) : 0;
+    var newUpgradesAdjustmentAmount = data.newUpgradesAdjustmentAmount ?
+      data.newUpgradesAdjustmentAmount.toFixed(2) : 0;
+
+    model.set('totalAmountDue', totalAmountDue);
+    model.set('newUgradesAmountDue', newUgradesAmountDue);
+    model.set('existingUpgradesAmountDue', existingUpgradesAmountDue);
+    model.set('subscrPricePerMonth', subscrPricePerMonth);
+    model.set('taxDue', taxDue);
+    model.set('taxRate', data.appliedTaxRate);
+    model.set('couponDiscount', couponDiscount);
+    model.set('newUpgradesAdjustmentAmount', newUpgradesAdjustmentAmount);
+    model.set('upgradeType', data.upgradeType);
+    model.set('expDate', dayjs(data.subscriptionEndDate).format('MMM D YYYY'));
+    model.set('appliedTaxRate', data.appliedTaxRate);
+    model.set('customerCurrency', data.customerCurrency);
+    model.set('totalAmountCustomerCurrency', data.totalAmountCustomerCurrency);
+    model.set('paymentIntentId', data.paymentIntentId);
+    model.set('clientSecret', data.clientSecret);
+  }
+
+  function makeChangesToUrl(upgradeSystemId, newArchivalRate, newSubscrTypeId, trialMode) {
+    window.history.pushState("", "", window.location.pathname +
+      '#makePayment/' + upgradeSystemId + '/' +
+      newArchivalRate + '/' + trialMode + '/' +
+      (newSubscrTypeId === 2 ? 'Pro' : 'ProPlus'));
+  }
+
+  function showConnectionIssue() {
+    var connectionIssueView = new ConnectionIssueView();
+    connectionIssueView.render();
+    $('#connection-issue').append(connectionIssueView.$el);
+  }
+
+  function _getTermTranslationKey(name) {
+    if (name.indexOf('1') !== -1) {
+      return '<span data-l10n-id="year_1"></span>'
+    }
+    if (name.indexOf('3') !== -1) {
+      return '<span data-l10n-id="year_3"></span>'
+    }
+    return name;
+  }
+
+  function initializeStripeElements(view) {
+    var elementStyles = {
+      base: {
+        color: '#3c464d',
+        fontWeight: 300,
+        fontSize: '14px',
+        fontSmoothing: 'antialiased',
+        '::placeholder': {
+          fontSize: '13px',
+          color: '#b3b6ba'
+        }
+      },
+      invalid: {
+        color: '#f15b2a'
+      },
+    };
+
+    var elementClasses = {
+      focus: 'focused',
+      empty: 'empty',
+      invalid: 'invalid',
+    };
+
+    var elements = wl.app.stripe.elements();
+    view.cardNumber = elements.create('cardNumber', {
+      style: elementStyles,
+      classes: elementClasses,
+    });
+    view.cardExpiry = elements.create('cardExpiry', {
+      style: elementStyles,
+      classes: elementClasses,
+    });
+    view.cardCvc = elements.create('cardCvc', {
+      style: elementStyles,
+      classes: elementClasses,
+    });
+    view.cardNumber.mount(view.ui.$cardNumber.selector);
+    view.cardExpiry.mount(view.ui.$cardExp.selector);
+    view.cardCvc.mount(view.ui.$cardCvc.selector);
+    console.log("initialized card element");
+  }
+
+  function logger(text) {
+    $('#userSubscription').append('<div style="padding: 5px 15px">'+text+'</div>')
+  }
+});

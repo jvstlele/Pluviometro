@@ -1,0 +1,81 @@
+/**
+ * Created by Kalin Muskov on 8/26/2015.
+ */
+
+window.wl = window.wl || {};
+window.wl.davis = window.wl.davis || {};
+window.wl.davis.views = window.wl.davis.views || {};
+
+wl.davis.views.AccordionWidgetView = Backbone.Marionette.ItemView.extend({
+	"ui": {
+		"widget": ".js-accordion",
+		"expand": ".js-expand",
+		"collapse": ".js-collapse",
+		"panel": ".right-panel-content"
+	},
+	"events": {
+		"click @ui.expand": "expand",
+		"click @ui.collapse": "collapse"
+	},
+	"expand": function(){
+		this.ui.expand.children().removeClass("glyphicon glyphicon-triangle-bottom").addClass("glyphicon glyphicon-triangle-top");
+		$(".ui-accordion-header").toggleClass("ui-corner-all", false).toggleClass("ui-accordion-header-active ui-state-active ui-corner-top", true).attr({"aria-selected": true});
+		$(".ui-accordion-header-icon").toggleClass("ui-icon-triangle-1-e", false).toggleClass("ui-icon-triangle-1-s", true);
+		$(".ui-accordion-content").addClass("ui-accordion-content-active").attr({"aria-expanded": true, "aria-hidden": false}).slideDown();
+		this.ui.expand.toggleClass("js-expand", false).toggleClass("js-collapse", true);
+	},
+	"collapse": function(){
+		this.ui.collapse = this.$el.find(".js-collapse");
+		this.ui.collapse.children().removeClass("glyphicon glyphicon-triangle-top").addClass("glyphicon glyphicon-triangle-bottom");
+		$(".ui-accordion-header").toggleClass("ui-corner-all", true).toggleClass("accordion-header-active ui-state-active ui-corner-top", false).attr({"aria-selected": false});
+		$(".ui-accordion-header-icon").toggleClass("ui-icon-triangle-1-e", true).toggleClass("ui-icon-triangle-1-s", false);
+		$(".ui-accordion-content").removeClass('ui-accordion-content-active').attr({"aria-expanded": false, "aria-hidden": true}).hide();
+		this.ui.collapse.toggleClass("js-collapse", false).toggleClass("js-expand", true);
+	},
+	"activateFirst": function(){
+		$(".ui-accordion-header").first().toggleClass("ui-corner-all", false).toggleClass("ui-accordion-header-active ui-state-active ui-corner-top", true).attr({"aria-selected": true});
+		$(".ui-accordion-header-icon").first().toggleClass("ui-icon-triangle-1-e", false).toggleClass("ui-icon-triangle-1-s", true);
+		$(".ui-accordion-content").first().addClass("ui-accordion-content-active").attr({"aria-expanded": true, "aria-hidden": false}).slideDown();
+	},
+	"onRender": function() {
+		this.ui.panel.perfectScrollbar();
+		var $panel = this.ui.panel;
+		var slideCb = function () {
+			$panel.perfectScrollbar && $panel.perfectScrollbar('update');
+		};
+		// Accordion widget setup
+		this.ui.widget.accordion({
+			"collapsible": true,
+			"active": false,
+			"heightStyle": "content",
+			"beforeActivate": function (event, ui) {
+				// The accordion believes a panel is being opened
+				if (ui.newHeader[0]) {
+					var currHeader = ui.newHeader;
+					var currContent = currHeader.next('.ui-accordion-content');
+					// The accordion believes a panel is being closed
+				} else {
+					var currHeader = ui.oldHeader;
+					var currContent = currHeader.next('.ui-accordion-content');
+				}
+				// Since we've changed the default behavior, this detects the actual status
+				var isPanelSelected = currHeader.attr('aria-selected') == 'true';
+				// Toggle the panel's header
+				currHeader.toggleClass('ui-corner-all', isPanelSelected).toggleClass('accordion-header-active ui-state-active ui-corner-top', !isPanelSelected).attr('aria-selected', ((!isPanelSelected).toString()));
+				// Toggle the panel's icon
+				currHeader.children('.ui-accordion-header-icon').toggleClass('ui-icon-triangle-1-e', isPanelSelected).toggleClass('ui-icon-triangle-1-s', !isPanelSelected);
+				// Toggle the panel's content
+				currContent.toggleClass('accordion-content-active', !isPanelSelected);
+				if (isPanelSelected) {
+					currContent.slideUp(null, slideCb);
+				} else {
+					currContent.slideDown(null, slideCb);
+				}
+				return false; // Cancels the default action
+			}
+		});
+	},
+	refresh: function() {
+		this.ui.widget.accordion("refresh");
+	}
+});

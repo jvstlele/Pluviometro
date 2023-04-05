@@ -1,0 +1,413 @@
+/**
+ * Created by anton.milko on 2/18/16.
+ */
+
+var Navbar = new NavbarClass();
+
+function NavbarClass() {
+
+  this.itUrgentMessageSet = false;
+
+  this._getPageName = function () {
+    var pageName = "";
+    var locationParts = window.location.pathname.split('/');
+    _.forEach(locationParts, function (item, i) {
+      if (/^[a-zA-Z]+$/.test(item)) {
+        pageName += item + '/';
+      }
+    });
+    return pageName;
+  };
+
+  this._toggleSidebar = function () {
+    $("#main-body-container").toggleClass("sidebar-open");
+    $("#btn-options ").toggleClass("sidebar-open");
+    if ($("#portal-container").children().length
+      && wl.data.portletConfigs.length > 1
+      && !wl.app.Dashboard.noPublicData) {
+      //resize & repack the tiles.
+      wl.app.Dashboard.trigger('tile:repack');
+      wl.app.Dashboard.trigger('pack:packery');
+    }
+    if ($('.charts-container').children().length) {
+      wl.app.StripChart.trigger('tile:repack');
+      wl.app.StripChart.trigger('pack:packery');
+    }
+    if (wl.data && wl.data.handsonBigData) {
+      wl.data.handsonBigData.render();
+    }
+    if (wl.app && wl.app.Browse) {
+      wl.app.Browse.trigger('sidebar:toggle');
+    }
+    if (wl.app && wl.app.Graph) {
+      wl.app.Graph.trigger('sidebar:toggle');
+    }
+    $(window).resize();
+    this.setSidebarState();
+  };
+
+  this._startAddDevice = function () {
+    // Stop module first if already started
+    if (wl.app.oAddDevice) {
+      wl.app.oAddDevice.stop();
+    }
+
+    wl.app.oAddDevice.start();
+  };
+
+  this._startWhatsNew = function () {
+    // Stop module first if already started
+    if (wl.app.oWhatsNew) {
+      wl.app.oWhatsNew.stop();
+    }
+
+    wl.app.oWhatsNew.start();
+  };
+
+  this.setActive = function () {
+    var url = document.location.href;
+    var isOrigin = url === document.location.origin || url === document.location.origin + '/';
+    var anchorFound = false;
+    var lastViewedPageUrl = (wl.bootstrap && wl.bootstrap.lastViewedPageUrl) ? wl.bootstrap.lastViewedPageUrl : '';
+    var navAnchors = document.querySelectorAll('ul#bs-example-navbar-collapse-1 li a');
+    var canAccessWebChart = wl.__canAccessWebChart;
+    var canAccessWebData = wl.__canAccessWebData;
+    var canAccessPublic = wl.__canAccessPublic;
+    var isDavisDefaultStation = wl.__isDavisDefaultStation;
+
+    this.setMobilizeLastSelectedView(navAnchors);
+
+    if (!isOrigin) {
+      for (var i = 0; i < navAnchors.length; i++) {
+        // if (!isDavisDefaultStation && (navAnchors[i].href.indexOf('chart') > 0)) {
+        //     navAnchors[i].className = 'disabled';
+        //     navAnchors[i].addEventListener("click", function (e) {
+        //         e.preventDefault();
+        //     });
+        // }
+        // if (!isDavisDefaultStation && (navAnchors[i].href.indexOf('browse') > 0)) {
+        //     navAnchors[i].className = 'disabled';
+        //     navAnchors[i].addEventListener("click", function (e) {
+        //         e.preventDefault();
+        //     });
+        // }
+        if (url.indexOf(navAnchors[i].href) >= 0 || navAnchors[i].href.indexOf(lastViewedPageUrl) > 0) {
+          anchorFound = true;
+          if (navAnchors[i].parentElement.tagName === 'LI') {
+            navAnchors[i].parentElement.className = 'active';
+          } else {
+            navAnchors[i].className = 'active';
+          }
+        }
+      }
+    }
+
+    if (anchorFound == false) {
+      $('#demo-nav-left .navbar-brand').addClass('active');
+    }
+  };
+
+  this.setMobilizeLastSelectedView = function (navAnchors) {
+    if (wl.data && wl.data.userAccountSetting) {
+      var userId = wl.data.userAccountSetting.userId;
+    }
+    var localStorage = null;
+    try {
+      localStorage = window.localStorage;
+    } catch (e) {
+    }
+    try {
+      if (!localStorage) {
+        localStorage = window.sessionStorage;
+      }
+    } catch (e) {
+    }
+
+    if (userId) {
+      _.forEach(navAnchors, function (anchor) {
+        if (anchor.pathname.indexOf('mobilize') >= 0) {
+          if (window.location.pathname.indexOf('mobilize') >= 0) {
+            $(anchor).attr('href', window.location.pathname);
+            localStorage.setItem('mobilizeView_userId_' + userId, JSON.stringify({
+              'userId': userId,
+              'path': window.location.pathname
+            }));
+          } else if (localStorage.getItem('mobilizeView_userId_' + userId)) {
+            var obj = JSON.parse(localStorage.getItem('mobilizeView_userId_' + userId));
+            if (obj != null && Number(obj.userId) === userId) {
+              $(anchor).attr('href', obj.path);
+            }
+          }
+        }
+      });
+    }
+  };
+
+  this.handleOptionsButtonClick = function () {
+    $('#btn-options').click(function () {
+      Navbar._toggleSidebar();
+    });
+  };
+
+  this.handleAddDeviceButtonClick = function () {
+    $('.add-device').click(function () {
+      Navbar._startAddDevice();
+    });
+  };
+
+  this.handleWhatsNewClick = function () {
+    $('.whats-new-link').click(function () {
+      Navbar._startWhatsNew();
+    });
+  };
+
+  this.getSidebarState = function () {
+    var pageName = this._getPageName();
+    if (localStorage && (!wl.__bootstrap_is_guest || wl.__showRightPanelForGuest)) {
+      var data = localStorage.getItem(pageName);
+      if (!data || data === "1") {
+        this._toggleSidebar();
+      }
+    }
+  };
+
+  this.setSidebarState = function () {
+    var pageName = this._getPageName();
+    if (pageName === "") {
+      return;
+    }
+    var state = $("#main-body-container").hasClass('sidebar-open') ? 1 : 0;
+    if (localStorage) {
+      localStorage.setItem(pageName, state);
+    }
+  };
+
+  this.getLastViewedPageLink = function (lastViewedUrl, lastViewedSystemId) {
+    if (!lastViewedUrl) {
+      lastViewedUrl = '/bulletin/';
+    }
+    if (!lastViewedSystemId) {
+      lastViewedSystemId = '';
+    }
+    return (lastViewedUrl.indexOf('mobilize') >= 0 || lastViewedUrl.indexOf('map') >= 0) ?
+      lastViewedUrl : lastViewedUrl + lastViewedSystemId;
+  };
+
+  this.setUrgentMessage = function (firebaseMsgObj) {
+    var urgentMsg = $('.nav-primary div.urgentMsg').html() || wl.__urgentMsg;
+    if (firebaseMsgObj && firebaseMsgObj.msg) {
+      urgentMsg = firebaseMsgObj.msg;
+      this.itUrgentMessageSet = true;
+      if (firebaseMsgObj.ln && firebaseMsgObj.lurl) {
+        urgentMsg += '<a target="_blank" href="' + firebaseMsgObj.lurl + '"> ' + firebaseMsgObj.ln + '</a>';
+      }
+    } else if (!this.itUrgentMessageSet && firebaseMsgObj && firebaseMsgObj.urgentMessage
+      && firebaseMsgObj.urgentMessage.subject) {
+      if (firebaseMsgObj.urgentMessage.targetUserIds != null) {
+        if (firebaseMsgObj.urgentMessage.targetUserIds[wl.__bootstrap_user_userId]) {
+          urgentMsg = firebaseMsgObj.urgentMessage.subject;
+          urgentMsg += '<a id="urgMsgLink" href="/account#/messages/' + firebaseMsgObj.urgentMessage.id + '" data-l10n-id="read_more"></a>';
+        }
+      } else {
+        urgentMsg = firebaseMsgObj.urgentMessage.subject;
+        urgentMsg += '<a id="urgMsgLink" href="/account#/messages/' + firebaseMsgObj.urgentMessage.id + '" data-l10n-id="read_more"></a>';
+      }
+    }
+    var $navPrimary = $('.nav-primary');
+    var $urgentMsg = $('.urgentMsg');
+    if (urgentMsg) {
+      if (!$navPrimary.length) {
+        $('#left-panel').prepend('<div class="nav-primary"><div class="urgentMsg">' + urgentMsg + '</div></div>');
+      } else {
+        if ($urgentMsg.length) {
+          $urgentMsg.html(urgentMsg);
+        } else {
+          $navPrimary.prepend('<div class="urgentMsg">' + urgentMsg + '</div>');
+        }
+      }
+      _positionMsg();
+      $('#urgMsgLink').click(function (e) {
+        e.preventDefault();
+        location.replace(e.target.href);
+        if (location.hash && location.hash.indexOf('messages') !== -1) {
+          wl.app.vent.trigger('messages:show');
+        }
+      })
+    }
+  }
+
+  this._openResellerInfoModal = function () {
+    var sDid = wl.__bootstrap_system_info.sDid;
+    $.get('/deviceSubscription/getCompanyInfo/'+ sDid, function (res) {
+      console.log(res);
+      if (res.data) {
+        var oModalBodyView = new ResellerInfoModalBodyView({
+          model: new Backbone.Model({
+            name: res.data.companyName,
+            email: res.data.companyEmail,
+          })
+        });
+
+        wl.app.Modal.showStandardModal('', oModalBodyView,
+          oModalFooterView, modalClass);
+      }
+    });
+    var modalClass = 'reseller-info-modal';
+    var oModalFooterView = new Marionette.ItemView({
+      template: false
+    });
+
+    var ResellerInfoModalBodyView = Marionette.ItemView.extend({
+      template: wl.shared.tpl['resellerInfo'],
+      ui: {
+        'closeButton': '.header-icon .icon-close'
+      },
+      events: {
+        'click @ui.closeButton': 'closeModal'
+      },
+      closeModal: function () {
+        wl.app.Modal.hideModal();
+      }
+    })
+  }
+
+  this.setDeviceStatusMessage = function () {
+    if (!wl.__bootstrap_system_info) {
+      return;
+    }
+    var isOwner = wl.__bootstrap_is_owner;
+    var subscrName = wl.__bootstrap_user_subscriptionType;
+    var statusId = wl.__bootstrap_system_info.gatewayStatusId;
+    var sDid = wl.__bootstrap_system_info.sDid;
+    var name = wl.__bootstrap_system_info.systemName;
+    var hrefHtml = '&nbsp';
+    var statusHtml = '';
+    var langKey = 'service_plan_reactivate_customer_support';
+
+    if (isOwner) {
+      name = name ? name.replace("'", '&#39;') : name;
+      var statusTitle = _getDeviceStatusName(statusId);
+      var isReseller = wl.__bootstrap_system_info.companyId > 0;
+
+      //Device Service Plans (Suspended, Cancelled, Terminated) messaging.
+      if (statusId > 1) {
+        if (!isReseller && statusId !== 9) {
+          var href = statusId === 4 ? '/iris/makePayment/' + sDid : '/iris/reactivateDevice/' + sDid;
+          hrefHtml = '<a id="reactivateLink" href="' + href + '" data-l10n-id="pay_now"></a>';
+          langKey = statusId === 4 ? 'service_plan_payment_suspended' : 'service_plan_reactivate_payment_required';
+        }
+        if (isReseller) {
+          langKey = 'service_plan_reactivate_reseller';
+          hrefHtml = '<a id="resellerInfoLink" data-l10n-id="reseller_info" ' +
+            'style="cursor: pointer" onclick="Navbar._openResellerInfoModal()"></a>';
+          if (statusId === 4) {
+            return;
+          }
+        }
+        statusHtml = '<div class="deviceStatus">' +
+          '<span style="padding: 6px 0" data-l10n-id="' + langKey + '"' +
+          ' data-l10n-args=\'{ "name": "' + name + '", "status": "' + statusTitle + '" }\'>&nbsp</span>' +
+          hrefHtml + '</div>';
+      }
+
+      //Device Service Plan Notification
+      if (wl.__bootstrap_device_subscriptionError) {
+        langKey = wl.__bootstrap_device_subscriptionError === 'authentication_required' ?
+          'service_plan_renew_error_auth' : 'service_plan_renew_error_payment_failure';
+        hrefHtml = '<a id="reactivateLink" href="/iris/reactivateDevice/' + sDid + '" data-l10n-id="pay_now"></a>';
+        statusHtml = '<div class="deviceStatus">' +
+          '<span style="padding: 6px 0" data-l10n-id="' + langKey + '"' +
+          ' data-l10n-args=\'{ "name": "' + name + '" }\'>&nbsp</span>' +
+          hrefHtml + '</div>';
+      }
+    }
+
+    // User subscription payment failure messaging
+    if (wl.__bootstrap_user_subscriptionError) {
+      langKey = wl.__bootstrap_user_subscriptionError === 'authentication_required' ?
+        'subscription_renew_error_auth' : 'subscription_renew_error_payment_failure';
+      hrefHtml = '<a id="reactivateLink" href="/accountSubscription#makePayment/renewSubscription"' +
+        ' data-l10n-id="pay_now"></a>';
+      statusHtml = '<div class="deviceStatus">' +
+        '<span style="padding: 6px 0" data-l10n-id="' + langKey + '"' +
+        ' data-l10n-args=\'{ "subscrType": "' + subscrName + '" }\'>&nbsp</span>' +
+        hrefHtml + '</div>';
+    }
+
+    if (statusId > 1 || wl.__bootstrap_device_subscriptionError || wl.__bootstrap_user_subscriptionError) {
+      var $navPrimary = $('.nav-primary');
+      if (!$navPrimary.length) {
+        $('#left-panel').prepend('<div class="nav-primary">' + statusHtml + '</div>');
+      } else {
+        $navPrimary.append(statusHtml);
+      }
+      _positionMsg();
+    }
+  }
+
+  function _getDeviceStatusName(statusId) {
+    var statuses = {
+      1: 'active',
+      2: 'suspended',
+      8: 'cancelled',
+      9: 'terminated'
+    };
+    return statuses[statusId] || '';
+  }
+
+  function _positionMsg() {
+    var $navSecondary = $('.nav-secondary');
+    var navPrimaryHeight = $('.nav-primary').height();
+    var navSecondaryHeight = $navSecondary.height();
+    var leftPanelOptionsHeight = $('.left-panel-options').height();
+    var $deviceManagementScrollContainer = $('.device-mgmt .scroll-container');
+    var contentsOffset = navPrimaryHeight + navSecondaryHeight + 52 + 'px';
+    var containerOffset = navPrimaryHeight + navSecondaryHeight + leftPanelOptionsHeight + 84 + 'px';
+    if(navPrimaryHeight && navSecondaryHeight) {
+      $('#page-contents').css({ 'padding-top': contentsOffset, 'height': 'calc(100% - ' + contentsOffset + ')' });
+    }
+    $navSecondary.css({ 'top': navPrimaryHeight + 57 + 'px' });
+    $('#dashboard, #summary, #handsontable, #map-container, .strip-chart')
+      .css({ 'height': 'calc(100vh - ' + containerOffset + ')' });
+    $('#right-panel .right-panel-i').css('top', navPrimaryHeight + 57 + 'px');
+    $("#myAccount,#deviceConfigurationForm,#nodeConfigurationForm,#maiaEmail,#maiaAlarm").css('padding-top', navPrimaryHeight);
+
+    // handle device management page
+    if ($deviceManagementScrollContainer.length) {
+      _adjustDeviceManagementFormsHeight($deviceManagementScrollContainer, navPrimaryHeight);
+    }
+  }
+
+  function _adjustDeviceManagementFormsHeight($deviceManagementScrollContainer, navPrimaryHeight, navSecondaryHeight) {
+    var $deviceManagementFormWrapper = $('.device-mgmt .device-form-wrapper, .health-data-container');
+    var navbarHeight = $('.navbar').height();
+
+    $deviceManagementFormWrapper.each(function(i, elem) {
+      var $elem = $(elem);
+      var elementMinHeight = parseInt($elem.css('min-height'));
+      $elem.css({'min-height': elementMinHeight - (navPrimaryHeight-1)});
+    });
+    $deviceManagementScrollContainer.css(
+      {height: $(window).height() - navPrimaryHeight - (navSecondaryHeight || 0) - navbarHeight - 104});
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  Navbar.setActive();
+
+  Navbar.handleOptionsButtonClick();
+  Navbar.handleAddDeviceButtonClick();
+  Navbar.handleWhatsNewClick();
+  Navbar.getSidebarState();
+  Navbar.setDeviceStatusMessage();
+  wl.app.vent.on('userUnreadCount', function (data) {
+    var $messageCount = $('.messages-count');
+    data ? $messageCount.text(data).show() : $messageCount.text(data).hide();
+  }.bind(this));
+  $(window).on('resize', _.debounce(function () {
+    Navbar.setUrgentMessage();
+  }, 300));
+  setTimeout(function () {
+    $(window).resize();
+  }, 500);
+});

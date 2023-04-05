@@ -1,0 +1,1897 @@
+/**
+ * Created by anton.milko on 10-May-18.
+ */
+
+var wl = wl || {};
+wl.data = wl.data || {};
+wl.bootstrap = wl.bootstrap || {};
+
+wl.app.module("oShareOptions", function (oShareOptions, oApp) {
+
+  oShareOptions.startWithParent = false;
+
+  var systemId, UPGRADE_TO_PRO_LINK, UPGRADE_TO_PRO_PLUS_LINK;
+
+  wl.app.on('before:start', function () {
+    systemId = wl.systemId || wl.data.systemId || wl.bootstrap.systemId || 0;
+
+    UPGRADE_TO_PRO_LINK = "/accountSubscription#makePayment/" + systemId +
+      "/0/false/Pro";
+    UPGRADE_TO_PRO_PLUS_LINK =
+      "/accountSubscription#makePayment/" + systemId +
+      "/0/false/ProPlus";
+  });
+
+  var tooltipTranslationKeys = ['share_tokens_tooltip',
+    'upgrades_tooltip', 'site_id_tooltip', 'auth_key_tooltip'
+  ];
+
+  //extend selectmenu to customize list items
+  $.widget('custom.selectmenu', $.ui.selectmenu, {
+    _renderItem: function (ul, item) {
+      var $el = $(item.element);
+      var dataLink = $el.attr('data-link');
+      var dataDesc = $el.attr('data-desc');
+      var href = $el.attr('data-href');
+      var index = $el.attr('data-index') || '';
+      var li = $('<li>');
+      var leftBlock = $('<div>', {
+        text: item.label
+      });
+
+      if (item.disabled) {
+        li.addClass('ui-state-disabled');
+      }
+      if (!dataDesc) {
+        li.append(leftBlock);
+      }
+
+      if (dataLink) {
+        var linkClassName = dataLink + "-" + index;
+        var rightBlock = $('<a>', {
+          'data-l10n-id': dataLink,
+          'href': href,
+          'class': linkClassName
+        });
+        var wrapper = $('<div class="li-wrapper">');
+        wrapper.append(leftBlock);
+        wrapper.append(rightBlock);
+        li.append(wrapper);
+        if (dataDesc) {
+          li.append('<span class="link-desc" data-l10n-id="' +
+            dataDesc + '"></span>');
+        }
+      }
+      return li.appendTo(ul);
+    },
+    //add placeholder option to selectmenu
+    _drawButton: function () {
+      this._super();
+      var selected = this.element
+        .find('[selected]')
+        .length,
+        placeholder = this.options.placeholder,
+        faded = this.options.faded;
+
+      if (!selected && placeholder) {
+        this.buttonItem.text(placeholder);
+      }
+      if (faded) {
+        this.buttonItem.css({
+          color: '#8a9297',
+          'fontWeight': 'normal'
+        });
+      }
+    }
+  });
+
+  var setTooltipTitles = function (ui) {
+    $.fn.tooltip = $.fn.tooltip.noConflict();
+    var self = this;
+    var promises = [];
+    _.each(tooltipTranslationKeys, function (key) {
+      var prom = document.l10n.formatValue(key);
+      promises.push(prom);
+    });
+    Promise.all(promises).then(function (values) {
+      _.forEach(values, function (value, i) {
+        if (ui[tooltipTranslationKeys[i]] && ui[
+          tooltipTranslationKeys[i]].length > 0) {
+          self.tooltipTitle =
+            '<div class="share-station-tooltip">' +
+            values[i] + '</div>';
+          ui[tooltipTranslationKeys[i]].attr(
+            'title', self.tooltipTitle);
+          ui[tooltipTranslationKeys[i]].tooltip();
+        }
+      });
+    });
+  }
+
+  //model to hold dynamic data used in share and uploads
+  var sharedModel = new Backbone.Model;
+
+  //main layout for modal window
+  var ModalLayoutView = Marionette.LayoutView.extend({
+    template: wl.shared.tpl['share-modal-body'],
+    model: new Backbone.Model,
+    regions: {
+      shareBody: '#share-body',
+      uploadBody: '#upload-body',
+      embedBody: '#embed-body',
+      summaryBody: '#summary-body',
+      whyProShare: '#pro-share-info',
+      infoModal: '#info-modal'
+    },
+    ui: {
+      'header': '#header',
+      'close': '.icon-close',
+      'headerTabs': '.header-tab',
+      'shareTab': '.header-tab-share',
+      'uploadTab': '.header-tab-upload',
+      'embedTab': '.header-tab-embed',
+      'summaryTab': '.header-tab-summary'
+    },
+    events: {
+      'click @ui.close': 'close',
+      'click @ui.shareTab': 'showShareView',
+      'click @ui.uploadTab': 'showUploadView',
+      'click @ui.embedTab': 'showEmbedView',
+      'click @ui.summaryTab': 'showSummaryView'
+    },
+    initialize: function (options) {
+      this.model.set('permission', options.permission);
+      this.model.set('embeddableSummary', wl.__featureFlags[
+        'EMBEDDABLE_SUMMARY']);
+      this.model.set('systemName', wl.__bootstrap_system_info.systemName);
+      oApp.on('whyProShare:show', this.showWhyProShare.bind(this));
+      oApp.on('whyProShare:hide', this.hideWhyProShare.bind(this));
+      oApp.on('infoModal:show', this.showInfoModal.bind(this));
+      oApp.on('infoModal:hide', this.hideInfoModal.bind(this));
+      oApp.on('supportToUpgrade:show', this.showSupportToUpgrade.bind(
+        this));
+      oApp.on('supportToUpgrade:hide', this.hideSupportToUpgrade.bind(
+        this));
+    },
+    onRender: function () {
+      this.showChildView('shareBody', new ShareLayoutView(this.options));
+      this.showChildView('uploadBody', new UploadLayoutView(this.options));
+      this.showChildView('embedBody', new EmbedView(this.options));
+      this.showChildView('summaryBody', new SummaryView(this.options));
+      this.showShareView();
+      $(".modal.fade").click(function (e) {
+        if ($(e.target).hasClass('modal')) {
+          this.close();
+        }
+      }.bind(this));
+    },
+    showShareView: function () {
+      this.hideAllViews();
+      this.shareBody.$el.show();
+      this.ui.headerTabs.removeClass('active');
+      this.ui.shareTab.addClass('active');
+    },
+    showUploadView: function () {
+      this.hideAllViews();
+      this.uploadBody.$el.show();
+      this.ui.headerTabs.removeClass('active');
+      this.ui.uploadTab.addClass('active');
+    },
+    showEmbedView: function () {
+      this.hideAllViews();
+      this.embedBody.$el.show();
+      this.ui.headerTabs.removeClass('active');
+      this.ui.embedTab.addClass('active');
+    },
+    showSummaryView: function () {
+      this.hideAllViews();
+      this.summaryBody.$el.show();
+      this.ui.headerTabs.removeClass('active');
+      this.ui.summaryTab.addClass('active');
+    },
+    showWhyProShare: function () {
+      this.ui.header.hide();
+      this.shareBody.$el.hide();
+      this.uploadBody.$el.hide();
+      this.embedBody.$el.hide();
+      this.showChildView('whyProShare', new whyProShareView());
+    },
+    hideAllViews: function () {
+      this.shareBody.$el.hide();
+      this.uploadBody.$el.hide();
+      this.embedBody.$el.hide();
+      this.summaryBody.$el.hide();
+    },
+    hideWhyProShare: function () {
+      this.ui.header.show();
+      this.shareBody.$el.show();
+      this.uploadBody.$el.hide();
+      this.embedBody.$el.hide();
+      this.getRegion('whyProShare').empty();
+    },
+    showInfoModal: function () {
+      var openedView = this.shareBody.$el.is(':hidden') ? 'upload' :
+        'share';
+      this.ui.header.hide();
+      this.shareBody.$el.hide();
+      this.uploadBody.$el.hide();
+      this.showChildView('infoModal', new oShareOptions.InfoModalView({
+        'openedView': openedView
+      }));
+    },
+    hideInfoModal: function (openedView) {
+      if (openedView === 'share') {
+        this.shareBody.$el.show();
+        this.uploadBody.$el.hide();
+      } else {
+        this.shareBody.$el.hide();
+        this.uploadBody.$el.show();
+      }
+      this.ui.header.show();
+      this.getRegion('infoModal').empty();
+    },
+    showSupportToUpgrade: function () {
+      var openedView = this.shareBody.$el.is(':hidden') ? 'upload' :
+        'share';
+      this.ui.header.hide();
+      this.shareBody.$el.hide();
+      this.uploadBody.$el.hide();
+      this.showChildView('infoModal', new oShareOptions.ContactSupportToUpgrade({
+        'openedView': openedView
+      }));
+    },
+    hideSupportToUpgrade: function (openedView) {
+      if (openedView === 'share') {
+        this.shareBody.$el.show();
+        this.uploadBody.$el.hide();
+      } else {
+        this.shareBody.$el.hide();
+        this.uploadBody.$el.show();
+      }
+      this.ui.header.show();
+      this.getRegion('infoModal').empty();
+    },
+    close: function () {
+      oApp.Modal.hideModal();
+    },
+    onDestroy: function () {
+      oApp.off('whyProShare:show');
+      oApp.off('whyProShare:hide');
+      oApp.off('infoModal:show');
+      oApp.off('infoModal:hide');
+      oApp.off('supportToUpgrade:show');
+      oApp.off('supportToUpgrade:hide');
+      this.shareBody.currentView.share.empty();
+      this.shareBody.currentView.manage.empty();
+      this.uploadBody.currentView.upload.empty();
+      this.uploadBody.currentView.manageUploads.empty();
+      $(".modal.fade").off('click');
+    },
+  });
+
+  //share/manage view switch
+  var ShareLayoutView = Marionette.LayoutView.extend({
+    id: 'shareLayout',
+    template: wl.shared.tpl['manage-share-switch'],
+    model: new Backbone.Model,
+    regions: {
+      share: '.share-content',
+      manage: '.manage-content'
+    },
+    ui: {
+      'tab': '.switch-tab',
+      'shareTab': '.share-tab',
+      'manageTab': '.manage-tab'
+    },
+    events: {
+      'click @ui.shareTab': 'showShareSearch',
+      'click @ui.manageTab': 'showManageSearch'
+    },
+    initialize: function (options) {
+      this.model.set('permission', options.permission);
+    },
+    onBeforeShow: function () {
+      this.showChildView('share', new ShareStationView(this.options));
+      this.showChildView('manage', new ManageStationView(this.options));
+      if (this.model.get('permission') === "owner") {
+        this.showManageSearch();
+      } else {
+        this.showShareSearch();
+      }
+    },
+    showShareSearch: function () {
+      this.manage.$el.hide();
+      this.share.$el.show();
+      this.ui.tab.removeClass('active');
+      this.ui.shareTab.addClass('active');
+    },
+    showManageSearch: function () {
+      this.manage.$el.show();
+      this.share.$el.hide();
+      this.ui.tab.removeClass('active');
+      this.ui.manageTab.addClass('active');
+    }
+  });
+
+  //upload/manage uploads switch view
+  var UploadLayoutView = Marionette.LayoutView.extend({
+    id: 'uploadLayout',
+    template: wl.shared.tpl['uploads-views-switch'],
+    model: new Backbone.Model,
+    regions: {
+      upload: '.upload-content',
+      manageUploads: '.manage-uploads-content'
+    },
+    ui: {
+      'tab': '.switch-tab',
+      'uploadTab': '.upload-tab',
+      'manageUploadsTab': '.manage-uploads-tab'
+    },
+    events: {
+      'click @ui.uploadTab': 'showUploadForm',
+      'click @ui.manageUploadsTab': 'showManageUploadsForm'
+    },
+    initialize: function (options) {
+      this.model.set('permission', options.permission);
+    },
+    onBeforeShow: function () {
+      this.showChildView('upload', new UploadFormLayoutView(this.options));
+      this.showChildView('manageUploads', new ManageUploadsFormView(
+        this.options));
+      this.showManageUploadsForm();
+    },
+    showUploadForm: function () {
+      this.upload.$el.show();
+      this.manageUploads.$el.hide();
+      this.ui.tab.removeClass('active');
+      this.ui.uploadTab.addClass('active');
+    },
+    showManageUploadsForm: function () {
+      this.showChildView('manageUploads', new ManageUploadsFormView(
+        this.options));
+      this.manageUploads.$el.show();
+      this.upload.$el.hide();
+      this.ui.tab.removeClass('active');
+      this.ui.manageUploadsTab.addClass('active');
+    }
+  });
+
+  //embed form view
+  var EmbedView = Marionette.ItemView.extend({
+    id: 'embed',
+    template: wl.shared.tpl['embed-view'],
+    model: new Backbone.Model,
+    initialize: function () {
+      this.model.set('wideFormatUrl');
+      this.model.set('airLinkOnlyUrl');
+      this.model.set('slimFormatUrl');
+      this.model.set('signatureFormatUrl');
+      this.model.set('fullscreenFormatUrl');
+      this.model.set('wideFormatHtml');
+      this.model.set('airLinkOnlyHtml');
+      this.model.set('slimFormatHtml');
+      this.model.set('signatureFormatHtml');
+      this.model.set('fullscreenFormatHtml');
+      this.model.set('embeddablePages', wl.__featureFlags[
+        "EMBEDDABLE_PAGE"]);
+      this.model.set('sDid', wl.data.sDid);
+      this.model.set('airLinkAvailable', Boolean(_.size(wl.data.aqsSensorData)));
+      this.model.set('gatewayType', wl.__bootstrap_system_info.gatewayTypeAbbrev);
+      this.getUrlToken();
+    },
+    onRender: function () {
+      this.$el.perfectScrollbar();
+    },
+    getUrlToken: function () {
+      var deviceIdentifier = wl.data.identifier;
+      //check if url token exists
+      wl.app.shareCalls.getUrlToken(deviceIdentifier).then(function (
+        response) {
+        if (response.urlToken && response.summaryUrlToken) {
+          this.setUrlToken(response.urlToken);
+          this.setSummaryUrlToken(response.summaryUrlToken);
+        } else { //otherwise generate a new one
+          wl.app.shareCalls.generateUrlToken(deviceIdentifier).then(
+            function (
+              response) {
+              if (response.urlToken) {
+                this.setUrlToken(response.urlToken);
+              }
+              if (response.summaryUrlToken) {
+                this.setSummaryUrlToken(response.summaryUrlToken);
+              }
+            }.bind(this));
+        }
+      }.bind(this));
+    },
+    setUrlToken: function (urlToken) {
+      this.model.set('deviceUrlToken', urlToken);
+      this.buildLinks();
+    },
+    setSummaryUrlToken: function (urlToken) {
+      this.model.set('summaryUrlToken', urlToken);
+      this.buildLinks();
+    },
+    buildLinks: function () {
+      var deviceUrlToken = this.model.get("deviceUrlToken");
+      this.model.set('wideFormatUrl', this.buildPreviewUrl(
+        deviceUrlToken, 'wide'));
+      this.model.set('airLinkOnlyUrl', this.buildPreviewUrl(
+        deviceUrlToken, 'airLink'));
+      this.model.set('slimFormatUrl', this.buildPreviewUrl(
+        deviceUrlToken, 'slim'));
+      this.model.set('signatureFormatUrl', this.buildPreviewUrl(
+        deviceUrlToken, 'signature'));
+      this.model.set('fullscreenFormatUrl', this.buildPreviewUrl(
+        deviceUrlToken, 'fullscreen'));
+
+      this.model.set('wideFormatHtml', this.buildCopyLinkHtml(
+        deviceUrlToken,
+        'wide', 560, 480));
+      this.model.set('airLinkOnlyHtml', this.buildCopyLinkHtml(
+        deviceUrlToken,
+        'airLink', 338, 396));
+      this.model.set('slimFormatHtml', this.buildCopyLinkHtml(
+        deviceUrlToken,
+        'slim', 338, 500));
+      this.model.set('signatureFormatHtml', this.buildCopyLinkHtml(
+        deviceUrlToken,
+        'signature', 760, 200));
+      this.model.set('fullscreenFormatHtml', this.buildCopyLinkHtml(
+        deviceUrlToken,
+        'fullscreen', '100%', '100%'));
+
+      this.render();
+
+      new ClipboardJS('.btn-copy-link-regular', {
+        text: function (trigger) {
+          return this.buildPreviewUrl(deviceUrlToken, "wide");
+        }.bind(this)
+      });
+      new ClipboardJS('.btn-copy-link-airlink', {
+        text: function (trigger) {
+          return this.buildPreviewUrl(deviceUrlToken, "airLink");
+        }.bind(this)
+      });
+      new ClipboardJS('.btn-copy-link-slim', {
+        text: function (trigger) {
+          return this.buildPreviewUrl(deviceUrlToken, "slim");
+        }.bind(this)
+      });
+      new ClipboardJS('.btn-copy-link-signature', {
+        text: function (trigger) {
+          return this.buildPreviewUrl(deviceUrlToken,
+            "signature");
+        }.bind(this)
+      });
+      new ClipboardJS('.btn-copy-link-fullscreen', {
+        text: function (trigger) {
+          return this.buildPreviewUrl(deviceUrlToken,
+            "fullscreen");
+        }.bind(this)
+      });
+
+      new ClipboardJS('.copy-html-regular', {
+        text: function (trigger) {
+          return this.buildCopyLinkHtml(deviceUrlToken,
+            "wide", 560, 480, true);
+        }.bind(this)
+      });
+      new ClipboardJS('.copy-html-airlink', {
+        text: function (trigger) {
+          return this.buildCopyLinkHtml(deviceUrlToken,
+            "airLink", 338, 396, true);
+        }.bind(this)
+      });
+      new ClipboardJS('.copy-html-slim', {
+        text: function (trigger) {
+          return this.buildCopyLinkHtml(deviceUrlToken,
+            "slim", 338, 500, true);
+        }.bind(this)
+      });
+      new ClipboardJS('.copy-html-signature', {
+        text: function (trigger) {
+          return this.buildCopyLinkHtml(deviceUrlToken,
+            "signature", 760, 200, true);
+        }.bind(this)
+      });
+      new ClipboardJS('.copy-html-fullscreen', {
+        text: function (trigger) {
+          return this.buildCopyLinkHtml(deviceUrlToken,
+            "fullscreen", "100%", "100%", true);
+        }.bind(this)
+      });
+    },
+    buildPreviewUrl: function (deviceUrlToken, pageSize) {
+      var rootUrl = Utils.getWebsiteURL();
+      /* 
+      window.location.origin ? window.location
+        .origin +
+        '/' :
+        window.location.protocol + '/' + window.location.host +
+        '/';
+      */
+      var pageLink = rootUrl + "embeddablePage/show/" +
+        deviceUrlToken + "/" + pageSize;
+      return pageLink;
+    },
+    buildCopyLinkHtml: function (deviceUrlToken, pageSize, width, height,
+      maintainHtml) {
+      var pageLink = this.buildPreviewUrl(deviceUrlToken, pageSize);
+      var iFrameHtml = "<iframe src='" + pageLink +
+        "' width='" + width + "' height='" + height +
+        "' frameborder='0'></iframe>";
+      if (!maintainHtml) {
+        iFrameHtml = this.escapeHtml(iFrameHtml);
+      }
+      return iFrameHtml;
+    },
+    escapeHtml: function (string) {
+      var entityMap = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': '&quot;',
+        "'": '&#39;',
+        "/": '&#x2F;'
+      };
+      return String(string).replace(/[&<>"'\/]/g, function (s) {
+        return entityMap[s];
+      });
+    }
+  });
+
+  //summary embed view
+  var SummaryView = EmbedView.extend({
+    id: 'embed-summary',
+    template: wl.shared.tpl['summary-view'],
+    initialize: function () {
+      this.model.set('summaryUrl');
+      this.model.set('embeddablePages', wl.__featureFlags[
+        "EMBEDDABLE_PAGE"]);
+      this.model.set('sDid', wl.data.sDid);
+      this.model.set('deviceIdentifier', wl.data.deviceIdentifier);
+      this.getUrlToken();
+    },
+    buildLinks: function () {
+      var summaryUrlToken = this.model.get("summaryUrlToken");
+      this.model.set('summaryUrl', this.buildPreviewUrl(
+        summaryUrlToken, 'summary'));
+      this.render();
+
+      new ClipboardJS('.btn-copy-link-summary', {
+        text: function (trigger) {
+          return this.buildPreviewUrl(summaryUrlToken,
+            "summary");
+        }.bind(this)
+      });
+    },
+  });
+
+  //search results list item
+  var UserItemView = Marionette.ItemView.extend({
+    className: 'user-item row',
+    template: wl.shared.tpl['user-item'],
+    model: new Backbone.Model,
+    ui: {
+      'shareBtn': '.share-button',
+      'shareType': '#shareType',
+      'removeBtn': '.remove-button',
+      'updateBtn': '.update-button',
+      'shareTypeSelect': '#shareType'
+    },
+    events: {
+      'click @ui.shareBtn': 'processShare',
+      'click @ui.removeBtn': 'showRemoveConfirm',
+      'click @ui.updateBtn': 'processUpdateShare',
+      'selectmenuchange @ui.shareTypeSelect': 'onShareTypeChange'
+    },
+    modelEvents: {
+      "change": "render"
+    },
+    templateHelpers: function () {
+      return {
+        viewIndex: this._index,
+        permission: sharedModel.get('permission'),
+        viewType: this.options.viewType,
+        upgraded: sharedModel.get('upgraded'),
+        selfUpgraded: this.getSelfUpgraded(),
+        userSubscriptionTypeId: sharedModel.get(
+          'userSubscriptionTypeId'),
+        deviceSubscriptionTier: sharedModel.get(
+          'deviceSubscriptionTier'),
+        devicesUpgradedCount: sharedModel.get('devicesUpgradedCount'),
+        deviceUpgradesAllowedCount: sharedModel.get(
+          'deviceUpgradesAllowedCount'),
+        devicesSharedCount: sharedModel.get('devicesSharedCount'),
+        deviceSharesAllowedCount: sharedModel.get(
+          'deviceSharesAllowedCount'),
+        isEMVC: wl.__isEMVC,
+        upgradeToProLink: UPGRADE_TO_PRO_LINK,
+        upgradeToProPlusLink: UPGRADE_TO_PRO_PLUS_LINK,
+        formatDate: function (ts) {
+          return dayjs(ts).format(Utils.getAccountDateFormat(wl.data
+            .userAccountSetting
+            .formatDateTypeId))
+        }
+      }
+    },
+    initialize: function () { },
+    onRender: function () {
+      this.ui.shareTypeSelect.selectmenu({
+        icons: {
+          button: "wl-icon icon-caretdown"
+        },
+        classes: {
+          "ui-selectmenu-menu": "shareOptions",
+          "ui-selectmenu-button": "shareOptions"
+        }
+      });
+
+      setTimeout(function () {
+        if (this.ui.shareTypeSelect && this.ui.shareTypeSelect.selectmenu) {
+          this.ui.shareTypeSelect.selectmenu('refresh');
+          this.isBasicShare = Boolean(Number(this.ui.shareType.val()) ===
+            1);
+          $('.upgrade_device-' + this._index).bind('click',
+            this.onClickDeviceUpgrade.bind(this));
+          $('.contact_us-' + this._index).bind('click', this
+            .onClickContactUs.bind(this));
+          $('.upgrade_to_pro_plus-' + this._index).bind('click',
+            this
+              .onClickDeviceUpgradeProPlus.bind(this));
+          this.initialSelectValue = this.isBasicShare;
+          this.toggleManageButtons(this.isBasicShare);
+        }
+      }.bind(this))
+    },
+    onClickDeviceUpgrade: function () {
+      oShareOptions.trigger('device:process:upgrade');
+      this.ui.shareTypeSelect.selectmenu("close");
+    },
+    onClickDeviceUpgradeProPlus: function () {
+      oShareOptions.trigger('device:process:upgrade', true);
+      this.ui.shareTypeSelect.selectmenu("close");
+    },
+    onClickContactUs: function () {
+      this.ui.shareTypeSelect.selectmenu('close');
+      this._parent.showInfoModal();
+    },
+    onShareTypeChange: function (e) {
+      this.isBasicShare = Boolean(Number($(e.target).val()));
+      this.toggleManageButtons(this.isBasicShare);
+    },
+    getSelfUpgraded: function () {
+      return _.includes(this.options.listUpgradedBy, this.model.get(
+        'user').userId)
+    },
+    toggleManageButtons: function (isBasicShare) {
+      if (this.model.get('deviceShare') == null || this.options.viewType ===
+        "share") return;
+      if (isBasicShare !== this.initialSelectValue) {
+        this.ui.updateBtn.show();
+        this.ui.removeBtn.hide();
+      } else {
+        this.ui.updateBtn.hide();
+        this.ui.removeBtn.show();
+      }
+    },
+    processShare: function (e, processUpdate) {
+      var userId = this.model.get('user').userId;
+      var shareMethod = wl.app.shareCalls.shareDevice;
+      var args = [userId, wl.data.systemId, this.isBasicShare];
+
+      //define public device share for public device
+      if (this.options.permission !== "owner") {
+        shareMethod = wl.app.shareCalls.sharePublicDevice;
+        args = [userId, wl.data.systemId];
+      }
+      shareMethod.apply(this, args).then(function (response) {
+        if (response.data) {
+          this.model.set('deviceShare', response.data);
+
+          //for update process find a model and change deviceShare object
+          if (processUpdate) {
+            var changedModel = _.find(this._parentLayoutView().share
+              .currentView.collection.models,
+              function (m) {
+                return m.get('user').userId === userId
+              });
+
+            if (changedModel) {
+              changedModel.set('deviceShare', response.data);
+            }
+          }
+
+          if (!this.isBasicShare || processUpdate) {
+            this._parent.getDevicesSharedCount();
+          }
+
+          //update manage shares list
+          if (!processUpdate) {
+            this._parentLayoutView().manage.currentView.getDeviceShares();
+          }
+
+        } else if (response.error) {
+          console.log(response.error.errorMessage);
+        }
+      }.bind(this))
+    },
+    showRemoveConfirm: function () {
+      var overlay = $(
+        '<div class="modal-overlay" style="display: none;"></div>');
+      this.$el.closest('.modal-body').append(overlay);
+      overlay.fadeIn(100);
+      var confirmationDialogView = new ConfirmationDialogView({
+        model: this.model,
+        processRemoveFn: this.processRemoveShared.bind(this)
+      });
+      confirmationDialogView.render();
+      this.$el.closest('.search-results').append(
+        confirmationDialogView.$el)
+    },
+    processRemoveShared: function (removeModalCb) {
+      wl.app.shareCalls.unshareDeviceSharedWithUserId(wl.data.systemId,
+        this.model.get('user').userId).then(function (response) {
+          if (!this.isBasicShare) {
+            this._parent.getDevicesSharedCount();
+          }
+          this._parent.collection.remove(this.model);
+          removeModalCb();
+        }.bind(this))
+    },
+    processUpdateShare: function () {
+      if (!this.isBasicShare && sharedModel.get('devicesSharedCount') ===
+        sharedModel.get('deviceSharesAllowedCount')) return;
+
+      wl.app.shareCalls.unshareDeviceSharedWithUserId(wl.data.systemId,
+        this.model.get('user').userId).then(function (response) {
+          this.processShare(null, true);
+        }.bind(this))
+    },
+    onDestroy: function () {
+      this.model.off('change');
+    }
+  });
+
+  /*
+   * contains search box and list of results under Share tab
+   */
+  var ShareStationView = Marionette.CompositeView.extend({
+    className: 'share-search',
+    template: wl.shared.tpl['share-station-search'],
+    childView: UserItemView,
+    childViewContainer: '.results-list',
+    model: sharedModel,
+    ui: {
+      'searchBtn': '.search-btn',
+      'searchInput': '#searchInput',
+      'searchResults': '.search-results',
+      'whyProShare': '#whyProShare',
+      'upgradeDeviceLink': '.upgrade-device-link',
+      'upgradeAccountLinkProPlus': '.upgrade-account-link.pro-plus',
+      'contactUsLink': '.contact-us-link',
+      'leftSection': '.left-section',
+      'infoBar': '.info-bar',
+      'divider': '.divider',
+      'resultsList': '.results-list',
+      'msgEmpty': '.msg-empty',
+      'shareSearchDesc': '.share-search-desc',
+      'searchError': '.search-error',
+      'share_tokens_tooltip': '#share_tokens_tooltip',
+      'upgrades_tooltip': '#upgrades_tooltip'
+    },
+    events: {
+      'click @ui.searchBtn': 'processSearch',
+      'click @ui.whyProShare': 'triggerWhyProShareShow',
+      'click @ui.upgradeDeviceLink': 'processUpgradeStation',
+      'click @ui.contactUsLink': 'showInfoModal',
+      'click @ui.upgradeAccountLinkProPlus': 'processUpgradeStation',
+      'submit form': 'processSearch'
+    },
+    initialize: function (options) {
+      this.collection = new Backbone.Collection;
+      this.collection.comparator = function (model) {
+        var user = model.get('user');
+        if (user.firstName !== '') {
+          return user.firstName.toLowerCase();
+        } else {
+          return user.username.toLowerCase();
+        }
+      }
+      sharedModel.set('systemId', wl.data.systemId);
+      sharedModel.set('permission', options.permission);
+      sharedModel.set('userSubscriptionTypeId', options.userSubscriptionTypeId);
+      sharedModel.set('deviceSubscriptionTier', options.deviceSubscriptionTier);
+      sharedModel.set('upgraded', false);
+      sharedModel.set('devicesSharedCount', 0);
+      sharedModel.set('deviceSharesAllowedCount', 0);
+      sharedModel.set('devicesUpgradedCount', 0);
+      sharedModel.set('deviceUpgradesAllowedCount', 0);
+      sharedModel.set('isEMVC', wl.__isEMVC);
+      sharedModel.set('ownerName', '');
+      sharedModel.set('tooltipTitle', '');
+      sharedModel.on('change', this.customRender.bind(this));
+      oApp.vent.once('device:upgraded', this.render.bind(this));
+      oShareOptions.on('device:process:upgrade', this.processUpgradeStation
+        .bind(this));
+      this.childViewOptions = _.assign({
+        viewType: this.getViewType()
+      }, this.model.attributes);
+      this.getSharedDeviceOwner();
+      this.checkDeviceUpgrade();
+      this.getDevicesSharedCount();
+      this.getDeviceSharesAllowedCount();
+      this.getDevicesUpgradedCount();
+      this.getDeviceUpgradesAllowedCount();
+      this.getUpgradedBy();
+    },
+    onRender: function () {
+      if (this.children.length > 0) {
+        this.ui.msgEmpty.hide();
+        this.ui.searchError.hide();
+      } else {
+        this.ui.msgEmpty.show();
+      }
+      setTooltipTitles.call(this, this.ui);
+    },
+    onDestroy: function () {
+      sharedModel.off('change');
+      oApp.vent.off('device:upgraded');
+      oShareOptions.off('device:process:upgrade');
+    },
+    customRender: function () {
+      //manually change only infoBar section to avoid rendering all collection
+      var infoBarEl = $.parseHTML(this.template(this.model.toJSON()))[
+        2];
+      $(infoBarEl).find('.icon-faq').attr('title', this.tooltipTitle);
+      $(this.$el).find(this.ui.infoBar.selector).replaceWith(
+        infoBarEl);
+      this.childViewOptions = _.assign(this.childViewOptions, this.model
+        .attributes);
+
+      if (sharedModel.get('devicesSharedCount') === sharedModel.get(
+        'deviceSharesAllowedCount')) {
+        this.render();
+      }
+    },
+    getViewType: function () {
+      return 'share'
+    },
+    triggerWhyProShareShow: function () {
+      oApp.trigger('whyProShare:show');
+    },
+    checkDeviceUpgrade: function () {
+      wl.app.shareCalls.getDeviceUpgrades().then(function (response) {
+        if (_.find(response, {
+          systemId: wl.data.systemId
+        })) {
+          this.childViewOptions.upgraded = true;
+          sharedModel.set('upgraded', true);
+          sharedModel.set('deviceUpgradeId', response[0].deviceUpgradeId)
+        }
+      }.bind(this));
+    },
+    getDevicesSharedCount: function () {
+      wl.app.shareCalls.getDeviceSharedCount(wl.data.systemId).then(
+        function (response) {
+          sharedModel.set('devicesSharedCount', response.data);
+        }.bind(this))
+    },
+    getDeviceSharesAllowedCount: function () {
+      wl.app.shareCalls.getDeviceSharesAllowedCount(wl.data.systemId)
+        .then(function (
+          response) {
+          sharedModel.set('deviceSharesAllowedCount', response.data);
+        }.bind(this))
+    },
+    getDevicesUpgradedCount: function () {
+      wl.app.shareCalls.getDevicesUpgradedCount().then(function (
+        response) {
+        sharedModel.set('devicesUpgradedCount', response.data);
+      }.bind(this))
+    },
+    getDeviceUpgradesAllowedCount: function () {
+      wl.app.shareCalls.getDeviceUpgradesAllowedCount().then(function (
+        response) {
+        sharedModel.set('deviceUpgradesAllowedCount', response.data);
+      }.bind(this))
+    },
+    getUpgradedBy: function () {
+      //get a list of user ids who has upgraded current device
+      wl.app.shareCalls.getDeviceUpgradedBy(wl.data.systemId).then(
+        function (data) {
+          sharedModel.set('listUpgradedBy', data);
+        }.bind(this))
+    },
+    getSharedDeviceOwner: function () {
+      if (this.options.permission === "shared") {
+        var currentUserId = wl.data.userAccountSetting.userId;
+        var sharedDevice = wl.app.MyDevicesList.sharedDevicesCollection
+          .findWhere({
+            sharedWithUserId: currentUserId
+          });
+        if (sharedDevice && sharedDevice.get('deviceInfo')) {
+          var ownerName = sharedDevice.get('deviceInfo').ownerFirstName +
+            ' ' + sharedDevice.get('deviceInfo').ownerLastName;
+          sharedModel.set('ownerName', ownerName);
+        }
+      }
+    },
+
+    /*
+     * Handles upgrdes using following logic
+     *    If Device Tier < User Subscription Tier
+     *         If upgrades available
+     *                 upgrade the device
+     *         else
+     *                 purchase one more upgrade
+     *   Else
+     *        if Device is on Basic -
+     *               redirect to Payment flow with Pro as new subscription tier
+     *        if Device is on Pro -
+     *               redirect to Payment flow with ProPlus as new subscription tier
+     *        if Device is On ProPlus
+     *               redirect to Contact Customer Support dialog
+     */
+    processUpgradeStation: function (isProPlus) {
+      var self = this;
+      var deviceSubscriptionTier = this.model.get(
+        'deviceSubscriptionTier');
+      var userSubscriptionTier = this.model.get(
+        'userSubscriptionTypeId');
+
+      /*
+      if (this.ui.upgradeAccountLinkProPlus.length || isProPlus) {
+
+        if (this.model.get('deviceUpgradesAllowedCount')) {
+          //pass numNewUpgrades as 0
+          window.location.href =
+            '/accountSubscription#makePayment/false/ProPlus/0';
+        } else {
+          window.location.href =
+            '/accountSubscription#makePayment/false/ProPlus';
+        }
+        return false;
+      }
+      */
+
+      if (deviceSubscriptionTier < userSubscriptionTier && !isProPlus) {
+        if (this.model.get('devicesUpgradedCount') < this.model.get(
+          'deviceUpgradesAllowedCount')) {
+          wl.app.shareCalls.upgradeDevice(wl.data.systemId).then(
+            function (
+              response) {
+              if (response.data) {
+                /*
+                 * get new device tier and update station options view model attribute
+                 * that will cause device tier manager view rerender
+                 */
+                wl.app.shareCalls.getDeviceSubscriptionTier(wl.data
+                  .systemId)
+                  .then(function (deviceTier) {
+                    wl.__bootstrap_device_subscription_tier =
+                      deviceTier;
+                    wl.app.MyDevicesList.StationTierView.prototype
+                      .model.set('deviceSubscriptionTier',
+                        deviceTier);
+
+                    wl.app.shareCalls.getDevicesUpgradedCount().then(
+                      function (response) {
+                        sharedModel.set(
+                          'deviceSubscriptionTier',
+                          deviceTier, {
+                          silent: true
+                        });
+                        sharedModel.set('devicesUpgradedCount',
+                          response.data, {
+                          silent: true
+                        });
+                        sharedModel.set('upgraded', true, {
+                          silent: true
+                        });
+                        self.childViewOptions.upgraded = true;
+                        self.childViewOptions.deviceSubscriptionTier =
+                          deviceTier;
+
+                        var promises = [];
+                        promises.push(wl.app.shareCalls.getDeviceSharedCount(
+                          wl.data.systemId));
+                        promises.push(wl.app.shareCalls.getDeviceSharesAllowedCount(
+                          wl.data.systemId));
+
+                        Promise.all(promises).then(function (
+                          values) {
+                          _.forEach(values, function (value) {
+                            sharedModel.set(
+                              'devicesSharedCount',
+                              values[0].data);
+                            sharedModel.set(
+                              'deviceSharesAllowedCount',
+                              values[1].data);
+                          });
+                          oApp.vent.trigger(
+                            'device:upgraded');
+                          wl.app.MyDevicesList.trigger(
+                            'favorites:update');
+                        });
+                      });
+                  });
+              } else if (response.error) {
+                this.ui.leftSection.empty().text(response.error.errorMessage)
+                  .addClass('error');
+              }
+            }.bind(this))
+        } else {
+          //buy another upgrade
+          var subscriptionType = userSubscriptionTier === 2 ? 'Pro' :
+            'ProPlus';
+          window.location.href =
+            '/accountSubscription#makePayment/' + wl.data.systemId +
+            '/0/false/' +
+            subscriptionType;
+        }
+      } else {
+        if (deviceSubscriptionTier === 1) {
+          var tier = isProPlus ? 'ProPlus' : 'Pro';
+          window.location.href =
+            '/accountSubscription#makePayment/' + wl.data.systemId +
+            '/0/false/' + tier;
+        } else if (deviceSubscriptionTier === 2) {
+          window.location.href =
+            '/accountSubscription#makePayment/' + wl.data.systemId +
+            '/0/false/ProPlus/0';
+        } else {
+          oApp.trigger('supportToUpgrade:show');
+        }
+      }
+    },
+    processSearch: function (e) {
+      e.preventDefault();
+      var searchInput = this.ui.searchInput.val();
+      if (searchInput && searchInput.trim().length > 0) {
+        wl.app.shareCalls.searchUsers(searchInput, wl.data.systemId).then(
+          function (response) {
+            if (response.length > 0) {
+              this.ui.msgEmpty.hide();
+              this.ui.searchError.hide();
+            } else {
+              this.ui.msgEmpty.show();
+              this.ui.shareSearchDesc.hide();
+              this.ui.searchError.show();
+            }
+            this.collection.reset(response);
+          }.bind(this))
+      }
+    },
+    showInfoModal: function () {
+      oApp.trigger('infoModal:show');
+    }
+  });
+
+  /**
+   * contains search box and list of results under Manage tab
+   * extend share view and redefine methods
+   */
+  var ManageStationView = ShareStationView.extend({
+    className: 'share-search',
+    initialize: function (options) {
+      this.collection = new Backbone.Collection;
+      this.listenTo(this.collection, 'remove', this.modelRemoved);
+      this.listenTo(this.model, 'change', this.render);
+      oApp.vent.once('device:upgraded', this.render.bind(this));
+      this.childViewOptions = _.assign({
+        viewType: this.getViewType()
+      }, this.model.attributes);
+    },
+    onRender: function () {
+      this.childViewOptions = _.assign(this.childViewOptions, this.model
+        .attributes);
+      if (this.children.length > 0) {
+        this.ui.msgEmpty.hide();
+        this.ui.searchError.hide();
+      }
+      this.ui.shareSearchDesc.attr('data-l10n-id',
+        'manage_search_desc');
+      setTooltipTitles.call(this, this.ui);
+    },
+    modelRemoved: function (model) {
+      var deviceShareId = model.get('deviceShare').deviceShareId;
+      var changedModel = _.find(this._parentLayoutView().share.currentView
+        .collection.models,
+        function (m) {
+          return m.get('deviceShare') != null && m.get(
+            'deviceShare').deviceShareId === deviceShareId
+        });
+      if (changedModel) {
+        changedModel.set('deviceShare', null);
+      }
+
+      if (this.collection.length === 0) {
+        this.ui.msgEmpty.show();
+      }
+    },
+    onShow: function () {
+      this.getDeviceShares();
+    },
+    getDeviceShares: function () {
+      wl.app.shareCalls.getDeviceShares(wl.data.systemId).then(
+        function (data) {
+          this.collection.reset(data);
+          if (data.length > 0) {
+            this.ui.msgEmpty.hide();
+          }
+        }.bind(this));
+    },
+    processSearch: function (e) {
+      e.preventDefault();
+      var searchInput = this.ui.searchInput.val();
+      if (searchInput && searchInput.trim().length > 0) {
+        wl.app.shareCalls.searchUsers(searchInput, wl.data.systemId).then(
+          function (response) {
+            response = _.filter(response, function (obj) {
+              return obj.deviceShare != null;
+            });
+            if (response.length > 0) {
+              this.ui.msgEmpty.hide();
+              this.ui.searchError.hide();
+            } else {
+              this.ui.msgEmpty.show();
+              this.ui.shareSearchDesc.hide();
+              this.ui.searchError.show();
+            }
+            this.collection.reset(response);
+          }.bind(this))
+      } else if (searchInput.length === 0) {
+        this.getDeviceShares();
+      }
+    },
+    getViewType: function () {
+      return 'manage'
+    }
+  });
+
+  var UploadsInfoBarView = Marionette.ItemView.extend({
+    template: wl.shared.tpl['uploads-infobar'],
+    templateHelpers: function () {
+      return {
+        systemId: wl.data.systemId
+      }
+    },
+    ui: {
+      'upgradeDevice': '.upgrade-device-link',
+      'contactUsLink': '.contact-us-link',
+      'share_tokens_tooltip': '#share_tokens_tooltip',
+      'upgrades_tooltip': '#upgrades_tooltip',
+      'upgradeAccountLinkProPlus': '.upgrade-account-link.pro-plus',
+    },
+    events: {
+      'click @ui.upgradeDevice': 'triggerProcessUpgrade',
+      'click @ui.contactUsLink': 'showInfoModal',
+      'click @ui.upgradeAccountLinkProPlus': 'triggerProcessUpgradeProPlus',
+    },
+    onRender: function () {
+      setTooltipTitles.call(this, this.ui);
+    },
+    triggerProcessUpgrade: function () {
+      oShareOptions.trigger('device:process:upgrade');
+    },
+    triggerProcessUpgradeProPlus: function () {
+      oShareOptions.trigger('device:process:upgrade', true);
+    },
+    showInfoModal: function () {
+      oApp.trigger('infoModal:show');
+    },
+    showSupportToUpgrade: function () {
+      // if (this.model.get('deviceUpgradesAllowedCount') > 1) {
+      //   oApp.trigger('supportToUpgrade:show');
+      // } else {
+      oApp.trigger('supportToUpgrade:show');
+      //window.location.href = '/accountSubscription#makePayment/false/ProPlus';
+      //}
+    }
+  });
+
+  var UploadFormLayoutView = Marionette.LayoutView.extend({
+    className: 'upload-form',
+    template: wl.shared.tpl['upload-form'],
+    model: sharedModel,
+    ui: {
+      'serviceSelect': '#serviceSelect',
+      'msgEmpty': '.msg-empty'
+    },
+    events: {
+      'selectmenuselect @ui.serviceSelect': 'onServiceChange'
+    },
+    regions: {
+      formContainer: '#form-container',
+      infoBar: '.info-bar'
+    },
+    templateHelpers: function () {
+      return {
+        gatewayTypeAbbrev: wl.__bootstrap_system_info ?
+          wl.__bootstrap_system_info.gatewayTypeAbbrev : null
+      }
+    },
+    initialize: function () {
+      this.loadedUploadFormType = null;
+      this.model.on('change', this.showInfoBar.bind(this));
+      oApp.vent.on('upload:removed', this.onUploadRemoved.bind(this));
+      oApp.vent.on('upload:added', this.onUploadAdded.bind(this));
+      oApp.vent.once('device:upgraded', this.onDeviceUpgraded.bind(
+        this));
+    },
+    onRender: function () {
+      this.initSelectmenu();
+    },
+    onBeforeShow: function () {
+      this.showInfoBar();
+    },
+    showInfoBar: function () {
+      this.showChildView('infoBar', new UploadsInfoBarView({
+        model: this.model
+      }));
+    },
+    initSelectmenu: function () {
+      document.l10n.formatValue("select_service_upload").then(
+        function (value) {
+          if (this.ui.serviceSelect.selectmenu) {
+            this.ui.serviceSelect.selectmenu({
+              placeholder: value,
+              icons: {
+                button: "wl-icon icon-caretdown"
+              },
+              classes: {
+                "ui-selectmenu-menu": "uploadSelect fullwidth",
+                "ui-selectmenu-button": "uploadSelect fullwidth"
+              }
+            });
+          }
+        }.bind(this));
+    },
+    resetFormContainer: function (uploadType) {
+      this.formContainer.empty();
+      this.formContainer.$el.append(this.ui.msgEmpty);
+      this.ui.serviceSelect.selectmenu('destroy');
+      this.ui.serviceSelect.find('option[value="' + uploadType + '"]')
+        .attr('disabled', true);
+      this.initSelectmenu();
+      this.loadedUploadFormType = null;
+    },
+    onDeviceUpgraded: function () {
+      this.showInfoBar();
+    },
+    onUploadRemoved: function (uploadType) {
+      this.ui.serviceSelect.find('option[value="' + uploadType + '"]')
+        .removeAttr('disabled');
+
+      //if no form was loaded - display initial state
+      if (this.loadedUploadFormType === null) {
+        this.ui.serviceSelect.selectmenu('destroy');
+        this.initSelectmenu();
+      } else { //if saved form exists then display it
+        this.ui.serviceSelect.val(this.loadedUploadFormType);
+        this.ui.serviceSelect.selectmenu('refresh');
+      }
+    },
+    onUploadAdded: function (uploadType) {
+      this.ui.serviceSelect.find('option[value="' + uploadType + '"]')
+        .attr('disabled', true);
+    },
+    onServiceChange: function (e) {
+      var serviceId = $(e.target).val();
+      switch (serviceId) {
+        case "CWOP":
+          this.loadCWOPform();
+          break;
+        case "GLOBE":
+          this.loadGLOBEform();
+          break;
+        case "WU":
+          this.loadWUform();
+          break;
+        case "WOW":
+          this.loadWOWform();
+      }
+      //save loaded form type
+      this.loadedUploadFormType = serviceId;
+    },
+    loadCWOPform: function () {
+      var deviceSharesAllowedCount = this.model.get(
+        'deviceSharesAllowedCount');
+      var devicesSharedCount = this.model.get('devicesSharedCount');
+      this.showChildView('formContainer', new CWOPformView({
+        deviceUploadType: 'CWOP',
+        'deviceSharesAllowedCount': deviceSharesAllowedCount,
+        "devicesSharedCount": devicesSharedCount
+      }))
+    },
+    loadGLOBEform: function () {
+      this.showChildView('formContainer', new GLOBEformView({
+        deviceUploadType: 'GLOBE'
+      }))
+    },
+    loadWUform: function () {
+      this.showChildView('formContainer', new WUformView({
+        deviceUploadType: 'WU'
+      }))
+    },
+    loadWOWform: function () {
+      this.showChildView('formContainer', new WOWformView({
+        deviceUploadType: 'WOW'
+      }))
+    },
+    onDestroy: function () {
+      oApp.vent.off('upload:removed');
+      oApp.vent.off('upload:added');
+    }
+  });
+
+  var UploadModel = Backbone.Model.extend({
+    defaults: {
+      deviceUploadType: '',
+      intervalInMins: 15,
+      password: '',
+      username: '',
+      editMode: false,
+      isEMVC: wl.__isEMVC,
+      subscriptionTypeName: ''
+    }
+  });
+
+
+  //upload form interval select dropdown view
+  this.IntervalSelectView = Marionette.ItemView.extend({
+    template: wl.shared.tpl['interval-select'],
+    ui: {
+      'uploadInterval': '#upload-interval'
+    },
+    events: {
+      'selectmenuselect @ui.uploadInterval': 'onIntervalChange'
+    },
+    getTemplate: function () {
+      if (this.model.get('deviceUploadType') === "WOW") {
+        return wl.shared.tpl["interval-select-wow"];
+      }
+      return wl.shared.tpl["interval-select"];
+    },
+    templateHelpers: function () {
+      return _.assign(sharedModel.attributes, {
+        upgradeToProLink: UPGRADE_TO_PRO_LINK,
+        upgradeToProPlusLink: UPGRADE_TO_PRO_PLUS_LINK
+      }) // temp
+    },
+    initialize: function () {
+      oApp.vent.once('device:upgraded', this.render.bind(this));
+      wl.app.oShareOptions.once('device:upgraded', this.render.bind(this));
+      sharedModel.once('change:deviceSharesAllowedCount', this.render
+        .bind(this));
+    },
+    onRender: function () {
+      var self = this;
+      // sort ascending
+      //    	var options = this.ui.uploadInterval.children('option');
+      //    	selVal = this.model.get('intervalInMins');
+      //    	options.sort(function(a, b) { return Number($(a).attr('data-interval')) > Number($(b).attr('data-interval')) ? 1 : -1; });
+      //    	this.ui.uploadInterval.append(options);
+      //    	var opt = this.ui.uploadInterval.find('option[data-interval="'+ selVal +'"]');
+      //    	opt.attr('selected', true);
+
+      if (this.options.intervals) {
+        var options = this.ui.uploadInterval.children('option');
+        _.forEach(this.options.intervals, function (interval) {
+          var option = self.ui.uploadInterval.find('option[data-interval="' + interval.txIntervalMin + '"]');
+          if (option.length) {
+            option.attr('data-storage', interval.availableStorageHours);
+            if (self.model.get('intervalInMins') === interval.txIntervalMin) {
+              $('#selectedStorageHours').text(interval.availableStorageHours);
+            }
+          }
+        });
+      }
+
+      this.ui.uploadInterval.on('selectmenuopen', function (event, ui) {
+        $('.upgrade_device-').bind('click', this.triggerProcessUpgrade
+          .bind(this));
+        $('.upgrade_to_pro_plus-').bind('click', this.triggerProcessUpgradeProPlus
+          .bind(this));
+      }.bind(this));
+      this.ui.uploadInterval.on('selectmenuclose', function (event, ui) {
+        $('.upgrade_device-').unbind('click');
+        $('.upgrade_to_pro_plus-').unbind('click');
+      }.bind(this));
+      setTimeout(function () {
+        if (this.ui.uploadInterval) {
+          this.ui.uploadInterval.selectmenu({
+            icons: {
+              button: "wl-icon icon-caretdown"
+            },
+            classes: {
+              "ui-selectmenu-menu": "shareOptions",
+              "ui-selectmenu-button": "shareOptions"
+            }
+          })
+        }
+      }.bind(this));
+    },
+    onIntervalChange: function (e) {
+      var interval = Number($(e.target).find(':selected').attr(
+        'data-interval'));
+      var storage = Number($(e.target).find(':selected').attr(
+        'data-storage'));
+      if (interval && this._parentLayoutView().setInterval) {
+        this._parentLayoutView().setInterval(interval, storage);
+        $('#btn-save-settings').show();
+      }
+    },
+    triggerProcessUpgrade: function () {
+      oShareOptions.trigger('device:process:upgrade');
+      if (wl.app.deviceConfiguration) {
+        wl.app.deviceConfiguration.trigger('device:process:upgrade');
+      }
+      this.ui.uploadInterval.selectmenu("close");
+    },
+    triggerProcessUpgradeProPlus: function () {
+      oShareOptions.trigger('device:process:upgrade', true);
+      if (wl.app.deviceConfiguration) {
+        wl.app.deviceConfiguration.trigger('device:process:upgrade', true);
+      }
+      this.ui.uploadInterval.selectmenu("close");
+    },
+    onDestroy: function () {
+      oApp.vent.off('device:upgraded');
+      sharedModel.off('change:deviceSharesAllowedCount');
+    }
+  })
+
+  var CWOPformView = Marionette.LayoutView.extend({
+    tagName: 'form',
+    template: wl.shared.tpl['cwop-form'],
+    model: new UploadModel(),
+    regions: {
+      'select': '#interval-select'
+    },
+    ui: {
+      'uploadBtn': '#upload-cwop',
+      'cancelBtn': '#cancel',
+      'cwopForm': 'form',
+      'callSign': '#call-sign',
+      'passCode': '#passcode'
+    },
+    events: {
+      'click @ui.uploadBtn': 'processUpload',
+      'click @ui.cancelBtn': 'onClickCancel',
+    },
+    initialize: function (options) {
+      this.model = new UploadModel();
+      _.assign(this.model.attributes, options);
+    },
+    onRender: function () { },
+    onBeforeShow: function () {
+      if (this.model.get('isEMVC')) {
+        //show device subscription instead of dropdown
+        wl.app.shareCalls.getDeviceSubscriptionType(wl.data.systemId)
+          .then(function (data) {
+            this.model.set('subscriptionTypeName', data.subscriptionTypeName);
+            this.model.set('intervalInMins', data.uploadInterval);
+            this.render();
+          }.bind(this));
+      } else {
+        this.showChildView('select', new oShareOptions.IntervalSelectView({
+          model: this.model
+        }));
+      }
+    },
+    setInterval: function (minInterval) {
+      this.model.set('intervalInMins', minInterval);
+    }
+    ,
+    onShow: function () {
+      this.uploadIntervalEl = $('#upload-interval');
+      this.uploadValidator = FORM_VALIDATOR.uploads(this.$el);
+    },
+    processUpload: function () {
+      if (this.uploadValidator.form()) {
+        var isBasic = Boolean(Number(this.uploadIntervalEl.val()) ===
+          1);
+        var deviceUpload = {
+          systemId: wl.data.systemId,
+          deviceUploadType: this.model.get('deviceUploadType'),
+          deviceUpgradeId: this._parentLayoutView().model.get(
+            'deviceUpgradeId'),
+          intervalInMins: this.model.get('intervalInMins'),
+          username: this.ui.callSign.val(),
+          password: this.ui.passCode.val()
+        }
+        wl.app.shareCalls.upload(deviceUpload, isBasic).then(function (
+          response) {
+          if (response.data) {
+            ShareStationView.prototype.getDevicesSharedCount();
+            this.renderUpdatedFormContainer(deviceUpload);
+          } else {
+            console.log(response.error);
+          }
+        }.bind(this));
+      }
+    },
+    renderUpdatedFormContainer: function (deviceUpload) {
+      if (this.model.get('editMode')) {
+        this.showUploadsList();
+      } else {
+        this._parentLayoutView().resetFormContainer(deviceUpload.deviceUploadType);
+      }
+    },
+    showUploadsList: function () {
+      this._parentLayoutView().showChildView('manageUploads', new UploadsCollectionView());
+    },
+    onClickCancel: function () {
+      this.showUploadsList();
+    }
+  });
+
+  var GLOBEformView = CWOPformView.extend({
+    tagName: 'form',
+    template: wl.shared.tpl['globe-form'],
+    ui: {
+      'intervalSelect': '#upload-interval',
+      'uploadBtn': '#upload-globe',
+      'cancelBtn': '#cancel',
+      'globeForm': 'form',
+      'schoolId': '#school-id',
+      'siteId': '#site-id'
+    },
+    onRender: function () {
+      this.ui.intervalSelect.selectmenu({
+        icons: {
+          button: "wl-icon icon-caretdown"
+        },
+        classes: {
+          "ui-selectmenu-menu": "shareOptions",
+          "ui-selectmenu-button": "shareOptions"
+        }
+      })
+      setTimeout(function () {
+        if (this.ui.intervalSelect && this.ui.intervalSelect.selectmenu) {
+          this.ui.intervalSelect.selectmenu('refresh');
+        }
+      }.bind(this));
+    },
+    processUpload: function () {
+      if (this.uploadValidator.form()) {
+        var isBasic = Boolean(Number(this.ui.intervalSelect.val()) ===
+          1);
+        var deviceUpload = {
+          systemId: wl.data.systemId,
+          deviceUploadType: this.model.get('deviceUploadType'),
+          deviceUpgradeId: this._parentLayoutView().model.get(
+            'deviceUpgradeId'),
+          intervalInMins: Number(this.ui.intervalSelect.find(
+            ':selected').attr('data-interval')),
+          username: this.ui.schoolId.val(),
+          password: this.ui.siteId.val()
+        }
+        wl.app.shareCalls.upload(deviceUpload, isBasic).then(function (
+          response) {
+          //ShareStationView.prototype.getDevicesSharedCount();
+          this.renderUpdatedFormContainer(deviceUpload);
+        }.bind(this));
+      }
+    },
+    onBeforeShow: _.noop()
+  })
+
+  var WUformView = CWOPformView.extend({
+    tagName: 'form',
+    template: wl.shared.tpl['wu-form'],
+    ui: {
+      'intervalSelect': '#upload-interval',
+      'uploadBtn': '#upload-wu',
+      'cancelBtn': '#cancel',
+      'wuForm': 'form',
+      'stationId': '#station-id',
+      'password': '#password'
+    },
+    processUpload: function () {
+      if (this.uploadValidator.form()) {
+        var isBasic = Boolean(Number(this.uploadIntervalEl.val()) ===
+          1);
+        var deviceUpload = {
+          systemId: wl.data.systemId,
+          deviceUploadType: this.model.get('deviceUploadType'),
+          deviceUpgradeId: this._parentLayoutView().model.get(
+            'deviceUpgradeId'),
+          intervalInMins: this.model.get('intervalInMins'),
+          username: this.ui.stationId.val(),
+          password: this.ui.password.val()
+        }
+
+        wl.app.shareCalls.upload(deviceUpload, isBasic).then(function (
+          response) {
+          ShareStationView.prototype.getDevicesSharedCount();
+          this.renderUpdatedFormContainer(deviceUpload);
+        }.bind(this));
+      }
+    }
+  });
+
+  var WOWformView = CWOPformView.extend({
+    tagName: 'form',
+    template: wl.shared.tpl['wow-form'],
+    ui: {
+      'intervalSelect': '#upload-interval',
+      'uploadBtn': '#upload-wow',
+      'cancelBtn': '#cancel',
+      'wowForm': 'form',
+      'siteId': '#site-id',
+      'authKey': '#auth-key',
+      'site_id_tooltip': '#site_id_tooltip',
+      'auth_key_tooltip': '#auth_key_tooltip'
+    },
+    onRender: function () {
+      setTooltipTitles.call(this, this.ui);
+    },
+    processUpload: function () {
+      if (this.uploadValidator.form()) {
+        var isBasic = Boolean(Number(this.uploadIntervalEl.val()) ===
+          1);
+        var deviceUpload = {
+          systemId: wl.data.systemId,
+          deviceUploadType: this.model.get('deviceUploadType'),
+          deviceUpgradeId: this._parentLayoutView().model.get(
+            'deviceUpgradeId'),
+          intervalInMins: this.model.get('intervalInMins'),
+          username: this.ui.siteId.val(),
+          password: this.ui.authKey.val()
+        };
+
+        wl.app.shareCalls.upload(deviceUpload, isBasic).then(function (
+          response) {
+          ShareStationView.prototype.getDevicesSharedCount();
+          this.renderUpdatedFormContainer(deviceUpload);
+        }.bind(this));
+      }
+    }
+  });
+
+  var ManageUploadsFormView = Marionette.LayoutView.extend({
+    className: 'manage-uploads-form',
+    template: wl.shared.tpl['manage-uploads-form'],
+    ui: {
+      'infoBar': '.info-bar',
+      'msgEmpty': '.msg-empty'
+    },
+    childEvents: {
+      'collection:add': 'onModelAdded',
+      'collection:remove': 'onModelRemoved',
+      'collection:sync': 'onCollectionFetched'
+    },
+    regions: {
+      'manageUploads': '#manage-uploads',
+      'infoBar': '.info-bar'
+    },
+    model: sharedModel,
+    initialize: function () {
+      this.model.on('change', this.showInfoBar.bind(this));
+      oApp.vent.once('device:upgraded', this.showInfoBar.bind(this));
+    },
+    onModelAdded: function (obj, model) {
+      var uploadType = model.get('deviceUploadType');
+      var serviceSelect = this._parentLayoutView().upload.currentView
+        .ui.serviceSelect;
+
+      oApp.vent.trigger('upload:added', uploadType);
+    },
+    onModelRemoved: function (obj, model, collectionLength) {
+      var uploadType = model.get('deviceUploadType');
+      var serviceSelect = this._parentLayoutView().upload.currentView
+        .ui.serviceSelect;
+      serviceSelect.find('option[value="' + uploadType + '"]').removeAttr(
+        'disabled');
+
+      oApp.vent.trigger('upload:removed', uploadType);
+
+      if (collectionLength === 0) {
+        this.ui.msgEmpty.show();
+      }
+    },
+    onCollectionFetched: function (obj, collectionLength) {
+      if (collectionLength === 0) {
+        this.ui.msgEmpty.show();
+      }
+    },
+    onBeforeShow: function () {
+      this.showUploadsList();
+      this.showInfoBar();
+    },
+    showUploadsList: function () {
+      this.showChildView('manageUploads', new UploadsCollectionView());
+    },
+    showInfoBar: function () {
+      if (this.isRendered) {
+        this.showChildView('infoBar', new UploadsInfoBarView({
+          model: this.model
+        }));
+      }
+    }
+  });
+
+  var ManageUploadsItemView = Marionette.ItemView.extend({
+    className: 'upload-item row',
+    template: wl.shared.tpl['manage-item'],
+    ui: {
+      'removeBtn': '.remove-btn',
+      'editBtn': '.edit-btn'
+    },
+    events: {
+      'click @ui.removeBtn': 'showRemoveConfirm',
+      'click @ui.editBtn': 'editUpload'
+    },
+    initialize: function () { },
+    showRemoveConfirm: function () {
+      var overlay = $(
+        '<div class="modal-overlay" style="display: none;"></div>');
+      this.$el.closest('.modal-body').append(overlay);
+      overlay.fadeIn(300);
+      var confirmationDialogView = new ConfirmationDialogView({
+        model: this.model,
+        processRemoveFn: this.removeUpload.bind(this)
+      });
+      confirmationDialogView.render();
+      this.$el.closest('.manage-uploads-content').append(
+        confirmationDialogView.$el);
+    },
+    removeUpload: function (removeModalCb) {
+      wl.app.shareCalls.removeUpload(wl.data.systemId, this.model.get(
+        'deviceUploadType')).then(function (response) {
+          ShareStationView.prototype.getDevicesSharedCount();
+          this.model.collection.remove(this.model);
+          removeModalCb();
+        }.bind(this));
+    },
+    editUpload: function () {
+      var editView;
+      switch (this.model.get('deviceUploadType')) {
+        case 'CWOP':
+          editView = CWOPformView;
+          break;
+        case 'GLOBE':
+          editView = GLOBEformView;
+          break;
+        case 'WU':
+          editView = WUformView;
+          break;
+        case 'WOW':
+          editView = WOWformView;
+      }
+      this.model.set('editMode', true);
+      this._parentLayoutView().showChildView('manageUploads', new editView(
+        this.model.attributes));
+    }
+  });
+
+  var UploadsCollection = Backbone.Collection.extend({
+    parse: function (response) {
+      return response.data || [];
+    },
+    initialize: function () {
+      this.url = '/deviceShare/uploads/' + wl.data.systemId;
+      this.fetch();
+    }
+  });
+
+  var UploadsCollectionView = Marionette.CollectionView.extend({
+    className: 'uploads-collection',
+    childView: ManageUploadsItemView,
+    initialize: function () {
+      this.collection = new UploadsCollection();
+      this.collection.on('add', function (m, col) {
+        this.triggerMethod('collection:add', m);
+      }.bind(this));
+      this.collection.on('sync', function (col) {
+        this.triggerMethod('collection:sync', col.length);
+      }.bind(this));
+      this.collection.on('remove', function (m, col) {
+        this.triggerMethod('collection:remove', m, col.length);
+      }.bind(this));
+    }
+  });
+
+  var whyProShareView = Marionette.ItemView.extend({
+    className: 'why-pro-share',
+    template: wl.shared.tpl['why-pro-share'],
+    ui: {
+      'takeBackBtn': '#take-back',
+      'closeIcon': '.icon-close'
+    },
+    events: {
+      'click @ui.takeBackBtn': 'triggerWhyProShareHide',
+      'click @ui.closeIcon': 'triggerWhyProShareHide'
+    },
+    initialize: function () { },
+    triggerWhyProShareHide: function () {
+      oApp.trigger('whyProShare:hide');
+    },
+  });
+
+  //contact us link
+  this.InfoModalView = Marionette.ItemView.extend({
+    className: 'info-modal',
+    template: wl.shared.tpl['info-modal'],
+    ui: {
+      'closeButton': '#close-modal'
+    },
+    events: {
+      'click @ui.takeBackBtn': 'triggerWhyProShareHide',
+      'click @ui.closeButton': 'closeModal'
+    },
+    closeModal: function () {
+      if (this.options.openedView) {
+        oApp.trigger('infoModal:hide', this.options.openedView);
+      } else {
+        wl.app.Modal.hideModal();
+      }
+    }
+  });
+
+  //contact customer support to upgrade
+  this.ContactSupportToUpgrade = this.InfoModalView.extend({
+    template: wl.shared.tpl['contact-for-upgrade-modal'],
+  });
+
+  //confirm share and upload removal
+  var ConfirmationDialogView = Marionette.ItemView.extend({
+    className: 'confirm-dialog',
+    template: wl.shared.tpl['confirm-remove'],
+    model: new Backbone.Model,
+    ui: {
+      'cancelBtn': '.cancel-button',
+      'confirmBtn': '.confirm-button'
+    },
+    events: {
+      'click @ui.cancelBtn': 'removeModal',
+      'click @ui.confirmBtn': 'onClickConfirm'
+    },
+    initialize: function (options) {
+      //check if removing share or upload
+      var attrs = options.model.attributes;
+      var isUpload = Boolean(attrs.deviceUploadType);
+      attrs.isUpload = isUpload;
+      if (!isUpload) {
+        attrs.deviceUpgradeId = attrs.deviceShare.deviceUpgradeId;
+      }
+      _.assign(this.model.attributes, attrs);
+    },
+    onRender: function () {
+      this.$el.hide();
+      this.$el.fadeIn(100);
+    },
+    onClickConfirm: function () {
+      this.options.processRemoveFn(this.removeModal.bind(this));
+    },
+    removeModal: function () {
+      this.removeOverlay();
+      this.destroy();
+    },
+    removeOverlay: function () {
+      this.$el.closest('.modal-body').find('.modal-overlay').fadeOut(
+        100,
+        function () {
+          $(this).remove()
+        });
+    }
+  });
+
+  // Initializer
+  oShareOptions.on('start', function (options) {
+    this.show(options);
+  });
+
+  oShareOptions.show = function (options) {
+    oModalBodyView = new ModalLayoutView(options);
+    oModalFooterView = new Marionette.ItemView({
+      template: false
+    });
+    oApp.Modal.showStandardModal('', oModalBodyView,
+      oModalFooterView, 'share-modal');
+  };
+});

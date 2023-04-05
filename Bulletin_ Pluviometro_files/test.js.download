@@ -1,0 +1,22 @@
+wl.app.module("Test", function (oModule, oApp) {
+	
+	oModule.showColors = function() {
+		var $div = $('<div></div>');
+		$div.css({
+			'margin-top': '100px'
+		});
+		_.each( wl.constants.sensorTypes, function(id, name) {
+			var sColor = wl.data.userColors.get(id).get('sColor');
+			var $d = $('<div>' + name + ' has color: ' + sColor + ' </div>');
+			var $s = $('<span>COLOR COLOR COLOR 123465789</span>');
+			$s.css({
+				color: sColor,
+				'border-bottom': '3px solid ' + sColor
+			});
+			$d.append($s);
+			$div.append($d);
+		});
+		console.log("div is ", $div);
+		$('#main-body-container').prepend($div);
+	};
+});

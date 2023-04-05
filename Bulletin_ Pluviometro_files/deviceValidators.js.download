@@ -1,0 +1,761 @@
+/* global FORM_VALIDATOR,deviceConstants */
+
+
+var DID_LENGTH = 12;
+var DID_REGEX = new RegExp('[0-9A-Fa-f]{' + DID_LENGTH + '}', 'g');
+var INTEGER_OR_BLANK_REGEX = /^(\s*|^-?[0-9]+)$/;
+var FLOAT_OR_BLANK = /^([+-]?([0-9]+([.,][0-9]*)?|[.,][0-9]+))?$/i;
+var ONE_DECIMAL_REGEX = /^-?(\d+)?([.,]\d{1,1})?$/i;
+var TWO_DECIMAL_REGEX = /^-?(\d+)?([.,]\d{1,2})?$/i;
+var THREE_DECIMAL_REGEX = /^-?(\d+)?([.,]\d{1,3})?$/i;
+var WLNS_PREFIX_REGEX = /^WLNS/;
+var NUMBER_CARRIER_REGEX =
+	/^\d*$|^(|[0-9]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,4}))$/;
+
+$.validator.methods.min = function (value, element, param) {
+    var value = value.replace(",", ".");
+    return this.optional(element) || value >= param;
+};
+
+$.validator.methods.max = function (value, element, param) {
+    var value = value.replace(",", ".");
+    return this.optional(element) || value <= param;
+};
+
+$.validator.addMethod('startsWithWLNS', function(value) {
+	return value.match(WLNS_PREFIX_REGEX);
+}, 'The activation code is incorrect');
+
+$.validator.addMethod('doesNotStartWithWLNS', function(value) {
+	return !value.match(WLNS_PREFIX_REGEX);
+}, 'The activation code is incorrect');
+
+$.validator.addMethod('countISS', function(value) {
+	return countTransceiverTypesByType(deviceConstants.transceiverIds.ISS) <= 1;
+}, 'You can have only one ISS Station selected.');
+
+$.validator.addMethod('countWIND', function(value) {
+	return countTransceiverTypesByType(deviceConstants.transceiverIds.WIND) <= 1;
+}, 'You can have only one WIND Station selected.');
+
+/**
+ * The user can only have one SOIL transceiver station selected
+ */
+$.validator.addMethod('countLEAF', function(value) {
+	return countTransceiverTypesByType(deviceConstants.transceiverIds.LEAF) <= 1;
+}, 'You can have only one LEAF Station selected.');
+
+/**
+ * The user can only have one SOIL transceiver station selected
+ */
+$.validator.addMethod('countSOIL', function(value) {
+	return countTransceiverTypesByType(deviceConstants.transceiverIds.SOIL) <= 1;
+}, 'You can have only one SOIL Station selected.');
+
+/**
+ * The user can only have one LEAF_SOIL or LEAF or SOIL transceiver station selected
+ */
+$.validator.addMethod('countLEAFSOIL', function(value) {
+	FORM_VALIDATOR.leafSoil = 0;
+	if (countTransceiverTypesByType(deviceConstants.transceiverIds.LEAF_SOIL) >
+		1) {
+		FORM_VALIDATOR.leafSoil = 2;
+		return false;
+	}
+	if (countTransceiverTypesByType(deviceConstants.transceiverIds.LEAF_SOIL) ===
+		1 &&
+		(countTransceiverTypesByType(deviceConstants.transceiverIds.LEAF) > 0 ||
+			countTransceiverTypesByType(deviceConstants.transceiverIds.SOIL) > 0)) {
+		FORM_VALIDATOR.leafSoil = 1;
+		return false;
+	}
+	return true;
+}, 'You can have only one SOIL Station selected.');
+
+
+/**
+ * Hilo values cannot be the same, unless they are blank, and hi value must be greater than lo value.
+ *
+ * This will clear both hi and lo HILO validation errors and then display one error if either the hi or lo
+ * is invalid.
+ */
+$.validator.addMethod('hilo', function(value, element) {
+	var hiloGroupId = $(element).data('hilo-group');
+	var hiloElements = $("input[data-hilo-group='" + hiloGroupId + "']");
+	var hiValue = $(hiloElements[0]).val();
+	var loValue = $(hiloElements[1]).val();
+
+	// turn off hilo validation for both values and revalidate to clear old errors
+	$(hiloElements[0]).removeClass('hilo').valid();
+	$(hiloElements[1]).removeClass('hilo').valid();
+
+	// add hilo validation back in
+	$(hiloElements[0]).addClass('hilo');
+	$(hiloElements[1]).addClass('hilo');
+
+	// validate the current field.
+	return hiValue === '' || loValue === '' || Number(hiValue) > Number(loValue);
+}, '<span data-l10n-id="hilo_validation"></span>');
+
+/**
+ * Hilo reversed values cannot be the same, unless they are blank, and hi value must be less than lo value.
+ *
+ * This will clear both hi and lo HILO validation errors and then display one error if either the hi or lo
+ * is invalid.
+ */
+$.validator.addMethod('hilo_reversed', function(value, element) {
+  var hiloGroupId = $(element).data('hilo-group');
+  var hiloElements = $("input[data-hilo-group='" + hiloGroupId + "']");
+  var hiValue = $(hiloElements[0]).val();
+  var loValue = $(hiloElements[1]).val();
+
+  // turn off hilo validation for both values and revalidate to clear old errors
+  $(hiloElements[0]).removeClass('hilo_reversed').valid();
+  $(hiloElements[1]).removeClass('hilo_reversed').valid();
+
+  // add hilo validation back in
+  $(hiloElements[0]).addClass('hilo_reversed');
+  $(hiloElements[1]).addClass('hilo_reversed');
+
+  // validate the current field.
+  return hiValue === '' || loValue === '' || Number(hiValue) < Number(loValue);
+}, '<span data-l10n-id="hilo_reversed_validation"></span>');
+
+/**
+ * The user can only have up to 7 TEMP and/or TEMP HUM transceiver stations selected
+ */
+$.validator.addMethod('countTEMPandTEMPHUM', function(value, element) {
+	var maxNumberOfTEMPandorTEMPHUMStations = 7;
+	var numTempandTempHumSensors = countTransceiverTypesByType(deviceConstants.transceiverIds
+			.TEMP) +
+		countTransceiverTypesByType(deviceConstants.transceiverIds.TEMP_HUM);
+	return numTempandTempHumSensors <= maxNumberOfTEMPandorTEMPHUMStations;
+}, 'You can only select 7 Temp and/or Temp Hum stations.');
+
+
+function countTransceiverTypesByType(transceiverType) {
+	return $('select[name=iTransceiverTypes] option[value=' + transceiverType +
+		']:selected').length;
+}
+
+/**
+ * validates that the number is an integer.
+ */
+$.validator.addMethod('integer_or_blank', function(value) {
+	return INTEGER_OR_BLANK_REGEX.test(value.trim());
+}, '<span data-l10n-id="integer_value"></span>');
+
+/**
+ * validates that the number is an integer.
+ */
+$.validator.addMethod('float_or_blank', function(value) {
+	return FLOAT_OR_BLANK.test(value.trim());
+}, '<span data-l10n-id="numeric_value"></span>');
+
+/**
+ * validates that the number has less than one decimal point
+ */
+$.validator.addMethod('oneDecimal', function(value) {
+	return ONE_DECIMAL_REGEX.test(value);
+}, '<span data-l10n-id="one_decimal"></span>');
+
+/**
+ * validates that the number has less than two decimal points
+ */
+$.validator.addMethod('twoDecimal', function(value) {
+	return TWO_DECIMAL_REGEX.test(value);
+}, '<span data-l10n-id="two_decimal"></span>');
+
+/**
+ * validates that the number has less than three decimal points
+ */
+$.validator.addMethod('threeDecimal', function(value) {
+	return THREE_DECIMAL_REGEX.test(value);
+}, '<span data-l10n-id="three_decimal"></span>');
+
+/**
+ * validates that input value is numeric or email
+ */
+$.validator.addMethod('numberAndCarrier', function(value) {
+	return NUMBER_CARRIER_REGEX.test(value);
+}, '<span data-l10n-id="number_and_carrier"></span>');
+
+/**
+ * validates match of provided regexp
+ */
+$.validator.addMethod("regex", function(value, element, regexpr) {
+	return regexpr.test(value);
+}, "");
+/**
+ * validates input to be axact length
+ */
+$.validator.addMethod("exactLength", function(value, element, param) {
+	return this.optional(element) || Number(value.length) === param;
+}, "");
+
+$.validator.addClassRules('1_decimal_or_blank', {
+	oneDecimal: true
+});
+
+$.validator.addClassRules('2_decimal_or_blank', {
+	twoDecimal: true
+});
+
+$.validator.addClassRules('3_decimal_or_blank', {
+	threeDecimal: true
+});
+
+$.validator.addClassRules('integer', {
+	integer_or_blank: true
+});
+
+$.validator.addClassRules('temperature', {
+	integer_or_blank: true
+});
+
+$.validator.addClassRules('humidity', {
+	integer_or_blank: true
+});
+
+$.validator.addClassRules('humidityCalibration', {
+    oneDecimal: true
+});
+
+$.validator.addClassRules('barometer', {
+	twoDecimal: true
+});
+
+$.validator.addClassRules('rain', {
+	twoDecimal: true
+});
+
+$.validator.addClassRules('uv_index', {
+	integer_or_blank: true
+});
+
+$.validator.addClassRules('solar_rad', {
+	integer_or_blank: true
+});
+
+$.validator.addClassRules('et', {
+	twoDecimal: true
+});
+
+$.validator.addClassRules('temperatureCalibration', {
+	oneDecimal: true
+});
+
+$.validator.addClassRules('time', {
+	time: true
+});
+
+jQuery.validator.addClassRules("email", {
+	email: true
+});
+
+jQuery.validator.addClassRules("numeric", {
+	digits: true
+});
+
+jQuery.validator.addClassRules("number-and-carrier", {
+	numberAndCarrier: true
+});
+
+jQuery.validator.addClassRules("float_or_blank", {
+	float_or_blank: true
+});
+
+FORM_VALIDATOR.transferDevice = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			userName: {
+				required: true
+			},
+			password: {
+				required: true
+			}
+		}
+	});
+
+	return validatorObj;
+};
+
+FORM_VALIDATOR.extendPlan = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			activationCode: {
+				required: true
+			}
+		}
+	});
+
+	return validatorObj;
+};
+
+FORM_VALIDATOR.activateVCDevice = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			stationName: {
+				required: true
+			},
+			sDid: {
+				required: true,
+				exactLength: 12,
+				synchronousRemote: {
+					param: ["/iris/validateVCDid", "POST"],
+					depends: function() {
+						return formElem.find('#device_id').val().length === 12;
+					}
+				}
+			},
+			key: {
+				required: true,
+				synchronousRemote: ["/iris/validateVCKey", "POST", {
+					name: "sDid"
+				}, true]
+			},
+			activationCode: {
+				required: false,
+				synchronousRemote: ["/iris/validateActivationCode", "POST"]
+			},
+			yearlyRain: {
+				synchronousRemote: ["/iris/validateYearlyRain", "POST"]
+			},
+			elevation: {
+				required: true,
+				synchronousRemote: ["/iris/validateElevation", "POST"]
+			},
+			seaLevelBarometer: {
+				synchronousRemote: ["/iris/validateSeaLevelBarometer", "POST"]
+			}
+
+		},
+		messages: {
+			stationName: {
+				required: formatErrorMessage("station_name_required")
+			},
+			sDid: {
+				required: formatErrorMessage("did_required"),
+				exactLength: formatErrorMessage("did_12_characters")
+			},
+			key: {
+				required: formatErrorMessage("key_required"),
+			},
+			activationCode: {
+				required: formatErrorMessage("activation_code_required"),
+			}
+		},
+		errorPlacement: function(error, element) {
+			if (element.is(':checkbox')) {
+				error.insertAfter($(element).next('label'));
+			} else {
+				error.insertAfter(element);
+			}
+		}
+	});
+
+	return validatorObj;
+};
+
+FORM_VALIDATOR.activateWLIPDevice = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			stationName: {
+				required: true
+			},
+			sDid: {
+				required: true,
+				exactLength: 12,
+				synchronousRemote: {
+					param: ["/iris/validateIPDid", "POST"],
+					depends: function() {
+						return formElem.find('#device_id').val().length === 12;
+					}
+				}
+			},
+			key: {
+				required: true,
+				synchronousRemote: ["/iris/validateVCKey", "POST", {
+					name: "sDid"
+				}, true]
+			},
+			elevation: {
+				required: true,
+				synchronousRemote: ["/iris/validateElevation", "POST"]
+			}
+		},
+		messages: {
+			stationName: {
+				required: formatErrorMessage("station_name_required")
+			},
+			sDid: {
+				required: formatErrorMessage("did_required"),
+				exactLength: formatErrorMessage("did_12_characters")
+			},
+			key: {
+				required: formatErrorMessage("key_required"),
+			}
+		},
+	});
+	return validatorObj;
+};
+
+FORM_VALIDATOR.activateWLNetworkDevice = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			activationCode: {
+				required: true,
+				minlength: 14,
+				maxlength: 18,
+				startsWithWLNS: true
+			}
+		},
+		messages: {
+			activationCode: {
+				minlength: 'The activation code is invalid',
+				maxlength: 'The activation code is invalid'
+			}
+		}
+	});
+
+	return validatorObj;
+};
+
+FORM_VALIDATOR.configureStation = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			stationType: {
+				required: true
+			},
+			stationName: {
+				required: true,
+				maxlength: 50
+			},
+			name: {
+				required: true,
+				maxlength: 50
+			},
+			sPrivacy: {
+				required: true
+			},
+			sTimeZone: {
+				required: true
+			},
+			sAddress1: {
+				maxlength: 100
+			},
+			sAddress2: {
+				maxlength: 100
+			},
+			sCity: {
+				maxlength: 100
+			},
+			iCountryCode: {
+				required: true
+			},
+			sRegion: {
+				maxlength: 100
+			},
+			sPostalCode: {
+				maxlength: 100
+			},
+			lat: {
+				required: true,
+				number: true,
+				maxlength: 20
+			},
+			lng: {
+				required: true,
+				number: true,
+				maxlength: 20
+			},
+			elevation: {
+				synchronousRemote: ["/iris/validateElevation", "POST"]
+			},
+			iTransceiverTypes: {
+				countISS: true,
+				countWIND: true,
+				countLEAF: true,
+				countSOIL: true,
+				countLEAFSOIL: true,
+				countTEMPandTEMPHUM: true
+			},
+			time: {
+				time: true
+			},
+			phoneNumber: {
+				digits: true
+			},
+			numberAndCarrier: {
+				numberAndCarrier: true
+			},
+			displaySMS: {
+				digits: true
+			}
+		},
+		groups: {
+			latLng: 'lat lng'
+		},
+		messages: {
+			iTransceiverTypes: {
+				countLEAFSOIL: function() {
+					if (FORM_VALIDATOR.leafSoil === 1) {
+						return
+							'If LEAF and/or SOIL is selected, you cannot have LEAF/SOIL Station selected.';
+					} else if (FORM_VALIDATOR.leafSoil === 2) {
+						return 'You can have only one LEAF/SOIL Station selected.';
+					}
+				}
+			}
+		},
+		errorPlacement: function(error, element) {
+			if (element.prop('name') === 'iTransceiverTypes') {
+				error.insertAfter($(element).parents('#gatewayForm').find('p'));
+				$(element).parents('#gatewayForm').addClass('has-error');
+			} else if (element.is('select')) {
+				error.appendTo($(element).parent('div'));
+			} else if (element.is(':radio')) {
+				error.appendTo($(element).parents('#privacyBlock').last('label'));
+				$(element).parents('#privacyBlock').addClass('has-error');
+			} else {
+				element.parent().append(error);
+			}
+		}
+	});
+
+	return validatorObj;
+};
+
+FORM_VALIDATOR.configureSettings = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			windCalibration: {
+				min: 0,
+				max: 359
+			},
+			insideTemperatureCalibration: {
+				synchronousRemote: ["/iris/validateInsideTemperatureCalibration", "POST"]
+			},
+			outsideTemperatureCalibration: {
+				synchronousRemote: ["/iris/validateOutsideTemperatureCalibration",
+					"POST"
+				]
+			},
+			seaLevelBarometer: {
+				synchronousRemote: ["/iris/validateSeaLevelBarometer", "POST"]
+			},
+			insideHumCalibration: {
+				min: -100,
+				max: 100
+			},
+			outsideHumCalibration: {
+				min: -100,
+				max: 100
+			},
+      humOffset: {
+        min: -100,
+        max: 100
+      },
+			elevation: {
+				synchronousRemote: ["/iris/validateElevation", "POST"],
+				required: true
+			},
+			yearToDateRainFall: {
+				synchronousRemote: ["/iris/validateYearlyRain", "POST"]
+			},
+			dSeaLevelBar: {
+				twoDecimal: true
+			},
+			dYearToDateRainfall: {
+				twoDecimal: true
+			},
+			dAlarmBarTrendHigh: {
+				twoDecimal: true
+			},
+			dAlarmETDay: {
+				twoDecimal: true
+			}
+		},
+		messages: {
+			elevation: {
+				required: formatErrorMessage("barometer_elevation_required")
+			}
+		},
+		errorPlacement: function(error, element) {
+			var $formGroup = $(element).closest('.form-group');
+			error.prependTo($formGroup);
+		}
+	});
+
+	return validatorObj;
+};
+
+FORM_VALIDATOR.configureWLLiveGatewaySettings = function(formElem) {
+    var validatorObj = formElem.validate({
+        errorPlacement: function(error, element) {
+            var $formGroup = $(element).closest('.form-group');
+            if (element.attr('data-name') === 'barometerStaleReading') {
+                $formGroup.addClass('stale-data-warning');
+            }
+            error.prependTo($formGroup);
+        }
+    });
+    return validatorObj;
+};
+
+FORM_VALIDATOR.uploads = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			weatherUndergroundStationId: {
+				maxlength: 16
+			},
+			weatherUndergroundPassword: {
+				maxlength: 32
+			},
+			globeSchoolId: {
+				maxlength: 255
+			},
+			globeSiteId: {
+				maxlength: 255
+			},
+			cwopCallSign: {
+				maxlength: 9
+			},
+			cwopPasscode: {
+				maxlength: 32
+			}
+		},
+		messages: {
+			weatherUndergroundStationId: {
+				maxlength: formatErrorMessage("max_16_characters"),
+				required: formatErrorMessage("station_id_required")
+			},
+			weatherUndergroundPassword: {
+				maxlength: formatErrorMessage("max_32_characters"),
+				required: formatErrorMessage("password_required")
+			},
+			globeSchoolId: {
+				maxlength: formatErrorMessage("max_255_characters"),
+				required: formatErrorMessage("globe_school_id_required")
+			},
+			globeSiteId: {
+				maxlength: formatErrorMessage("max_255_characters"),
+				required: formatErrorMessage("globe_site_id_required")
+			},
+			cwopCallSign: {
+				maxlength: formatErrorMessage("max_9_characters"),
+				required: formatErrorMessage("cwop_call_sign_required")
+			},
+			cwopPasscode: {
+				maxlength: formatErrorMessage("max_32_characters")
+			}
+		}
+	});
+
+	return validatorObj;
+};
+
+/**
+ * validates emails string divided by comma
+ * @param formElem
+ */
+FORM_VALIDATOR.emails = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			emails: {
+				required: {
+					depends: function() {
+						$(this).val($.trim($(this).val()));
+						return true;
+					}
+				},
+				regex: /^(\s*,?\s*[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*@([0-9a-zA-Z][-\w]*[0-9a-zA-Z]\.)+[a-zA-Z]{2,9})+\s*$/,
+			}
+		},
+		messages: {
+			emails: {
+				required: formatErrorMessage('error_email_required'),
+				regex: formatErrorMessage('error_email_emails'),
+			}
+		}
+	});
+	return validatorObj;
+};
+
+FORM_VALIDATOR.skipPayment = function(formElem) {
+	var validatorObj = formElem.validate({
+		rules: {
+			name: {
+				required: true
+			},
+			email: {
+				required: true
+			},
+			company: {
+				required: false
+			},
+			countryCode: {
+				required: true
+			},
+			address1: {
+				required: true
+			},
+			city: {
+				required: true
+			},
+			state: {
+				required: true
+			},
+			zipCode: {
+				required: true
+			},
+		},
+		messages: {
+			name: {
+				required: formatErrorMessage("name_required")
+			},
+			email: {
+				required: formatErrorMessage("error_email_required"),
+			},
+			countryCode: {
+				required: formatErrorMessage("country_required"),
+			},
+			address1: {
+				required: formatErrorMessage("address1_required"),
+			},
+			city: {
+				required: formatErrorMessage("city_required"),
+			},
+			state: {
+				required: formatErrorMessage("state_required"),
+			},
+			zipCode: {
+				required: formatErrorMessage("postal_code_required"),
+			}
+		},
+		errorPlacement: function(error, element) {
+			if (element.is(':checkbox')) {
+				error.insertAfter($(element).next('label'));
+			} else {
+				if (element.hasClass('country')) {
+					element.parent().find('.help-block').remove()
+				}
+				error.insertAfter(element);
+			}
+		}
+	});
+
+	return validatorObj;
+};
+
+jQuery.extend(jQuery.validator.messages, {
+	min: jQuery.validator.format(
+		'<span data-l10n-id="min_validation_message" data-l10n-args="{ &quot;min&quot;: &quot;{0}&quot;}"></span>'
+	),
+	max: jQuery.validator.format(
+		'<span data-l10n-id="max_validation_message" data-l10n-args="{ &quot;max&quot;: &quot;{0}&quot;}"></span>'
+	),
+	required: '<span data-l10n-id="required_field"></span>',
+	email: '<span data-l10n-id="email_validation"></span>',
+	digits: '<span data-l10n-id="numeric_validation"></span>'
+})

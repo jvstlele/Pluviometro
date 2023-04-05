@@ -1,0 +1,2881 @@
+/**
+ * General Utility Functions
+ */
+
+/*** Initiallize class ***/
+var Utils = new UtilsClass();
+
+function UtilsClass() {
+
+  /*
+   * Get sensor settings from sensor data
+   */
+  this.getSensorSettings = function (sensorData, lsid, sdtid) {
+    // Get legacy sensor data
+    var legacyData = sensorData.legacyNodeData;
+    // Get sensor settings
+    var sensorDataType = this._getSensorSettings(legacyData, lsid, sdtid);
+
+    if (sensorDataType === undefined) {
+      // Get maia sensor data
+      var maiaData = sensorData.maiaNodeData;
+      // Get sensor settings
+      sensorDataType = this._getSensorSettings(maiaData, lsid, sdtid);
+    }
+
+    return sensorDataType;
+  };
+
+  /**
+   * Loop through the sensorData to retrieve the requested logical sensor.
+   **/
+  this.getLogicalSensorByLsid = function (iLsid) {
+    var oMatchedLogicalSensor = null;
+    var nodeData = [].concat(wl.data.sensorData.legacyNodeData).concat(wl.data
+      .sensorData.maiaNodeData);
+    //Loop through all the  sensor data to get the nodes
+    _.each(nodeData, function (oNode, key1) {
+      //Loop through each logical sensor in the node
+      _.each(oNode.logicalSensor, function (oLogicalSensor, key2) {
+        //Determine if the logical sensor is the one we are looking for.
+        if (oLogicalSensor.logicalSensorId == iLsid) {
+          oMatchedLogicalSensor = oLogicalSensor;
+          return false; //Exit out of the loop.
+        }
+      });
+      //If a mach is found, then exit out of the loop.
+      if (oMatchedLogicalSensor != null) {
+        return false;
+      }
+    });
+
+    return oMatchedLogicalSensor;
+  }
+
+  /*
+   * Get sensor settings from admin chart
+   */
+  this.getSensorSettingsForAdmin = function (sensorData, lsid, sdtid) {
+    // Get legacy sensor data
+    var legacyData = sensorData.legacyNodeData;
+    // Get sensor settings
+    var sensorDataType = this._getSensorSettingsForAdmin(legacyData, lsid,
+      sdtid);
+
+    if (sensorDataType === undefined) {
+      // Get maia sensor data
+      var maiaData = sensorData.maiaNodeData;
+      // Get sensor settings
+      sensorDataType = this._getSensorSettingsForAdmin(maiaData, lsid, sdtid);
+    }
+
+    return sensorDataType;
+  };
+
+  /*
+   * Get sensor settings from sensor data
+   */
+  this._getSensorSettings = function (data, lsid, sdtid) {
+    for (var i in data) {
+      var node = data[i];
+      for (var y in node.logicalSensor) {
+        var logicalSensor = node.logicalSensor[y];
+        if (logicalSensor.logicalSensorId == lsid) {
+          for (var z in logicalSensor.sensorDataType) {
+            var sensorDataType = logicalSensor.sensorDataType[z];
+            if (sensorDataType.sensorDataTypeId == sdtid) {
+              return sensorDataType
+            }
+          }
+          //search bucket data types
+          for (var x in logicalSensor.sensorBucketDataType) {
+            var sensorBucketDataType = logicalSensor.sensorBucketDataType[x];
+            if (sensorBucketDataType.sensorDataTypeId == sdtid) {
+              return sensorBucketDataType
+            }
+          }
+        }
+      }
+    }
+  };
+
+  /*
+   * Get sensor settings from sensor data
+   */
+  this._getSensorSettingsForAdmin = function (data, lsid, sdtid) {
+    for (var i in data) {
+      var node = data[i];
+      for (var y in node.logicalSensor) {
+        var logicalSensor = node.logicalSensor[y];
+        if (logicalSensor.logicalSensorId == lsid) {
+          for (var z in logicalSensor.sensorDataType) {
+            var sensorDataType = logicalSensor.sensorDataType[z];
+            if (sensorDataType.sensorDataTypeId == sdtid) {
+              return sensorDataType
+            }
+          }
+          //search bucket data types
+          for (var x in logicalSensor.sensorBucketDataType) {
+            var sensorBucketDataType = logicalSensor.sensorBucketDataType[x];
+            if (sensorBucketDataType.sensorDataTypeId == sdtid) {
+              return sensorBucketDataType
+            }
+          }
+        }
+      }
+    }
+  };
+
+  /*
+   * check if series obj has data
+   */
+  this.checkSeriesData = function (series) {
+    var bValid = false;
+    _.forEach(series.data, function (item, i) {
+      if (item[1] != null && item[1] != 0) {
+        bValid = true;
+      }
+    });
+    return bValid;
+  }
+
+  /*
+   * Apply sensor settings changes to the chart
+   */
+  this.applySensorSettingsToHighcharts = function (model, chart) {
+    var seriesIndex = 0;
+    var linkedSeriesIndex = null;
+    for (var i in chart.options.series) {
+      var series = chart.options.series[i];
+      if (series.lsid == model.get("logicalSensorId") && series.sdtid ==
+        model.get("sensorDataTypeId")) {
+        //seriesIndex = i;
+        seriesIndex = series.id;
+      }
+    }
+
+    //var series = wl.app.Graph.chart.series[seriesIndex];
+    var series = chart.get(seriesIndex);
+
+    var yAxis = chart.yAxis;
+
+    //save custom attributes for tooltip into object
+    var tooltipAttrs = {};
+    if (series.legendItem) {
+      _.forEach(series.legendItem.element.attributes, function (attr) {
+        if (attr.name.indexOf('data-') >= 0 || attr.name === "title") {
+          tooltipAttrs[attr.name] = attr.value;
+        }
+      });
+    }
+
+    var showData = model.get("visible");
+    var displayName = this.getLabelUnit(model.get("yscaleName"), series.yAxis
+      .userOptions.metadata.unit);
+
+    //var bGroupRainEt = false;
+    //var bRain = false;
+    //var bEt = false;
+
+    //for(var i in collection.models) {
+    //  var sensorModel = collection.models[i];
+    //  if(sensorModel.get("sYScaleName") == "Rain" && sensorModel.get("iChecked") == 1) {
+    //      bRain = true;
+    //  }
+    //  if( sensorModel.get("sYScaleName") == "ET" && sensorModel.get("iChecked") == 1) {
+    //      bEt = true;
+    //  }
+    //}
+
+    //bGroupRainEt = bRain && bEt;
+    //if(bGroupRainEt) {
+    //  if(model.get("sYScaleName") == "Rain" || model.get("sYScaleName") == "ET") {
+    //      displayName = this.getYAxisLabelUnit("Rain/ET", series.yAxis.userOptions.metadata.unit);
+    //  }
+    //}
+    var scaleLocation = model.get("yscaleLocation");
+    if (showData == 1) {
+      series.update({
+        visible: true
+      }, false);
+
+      series.yAxis.update({
+        labels: {
+          enabled: true
+        },
+        title: {
+          text: displayName
+        }
+      }, false);
+      scaleLocation = series.yAxis.opposite ? 2 : 1;
+
+    } else {
+      series.update({
+        visible: false
+      }, false);
+
+      var iVisible = 0;
+
+      if (!iVisible) {
+        _.each(yAxis, function (y) {
+          if (series.yAxis == y) {
+            //hide yAxis when it has no visible series
+            if (_.size(_.filter(y.series, {
+              visible: true
+            })) == 0) {
+              scaleLocation = 0;
+              series.yAxis.update({
+                labels: {
+                  enabled: false
+                },
+                title: {
+                  text: displayName
+                }
+              }, false);
+            } else {
+              scaleLocation = series.yAxis.opposite ? 2 : 1;
+            }
+          }
+        });
+      }
+    }
+    var foundVisible = false;
+    var visibleYaxisIndex = null;
+
+    for (var i in chart.series) {
+      if (chart.series[i].visible == true && this.checkSeriesData(
+        chart.options.series[i]) && foundVisible == false) {
+        foundVisible = true;
+        chart.series[i].yAxis.update({
+          gridLineWidth: 1
+        }, false);
+        visibleYaxisIndex = chart.options.series[i].yAxis;
+      } else if (chart.options.series[i].yAxis !=
+        visibleYaxisIndex) {
+        chart.series[i].yAxis.update({
+          gridLineWidth: 0
+        }, false);
+      }
+    }
+
+    var lineGraph = model.get("graphViewTypeId");
+    if (lineGraph == 1) {
+      if (model.get('yscaleName').indexOf("Soil Moisture") >= 0) {
+        series.update({
+          type: "line",
+          step: true
+        }, false);
+      } else {
+        var linearType = chart.options.boost.enabled ? "line" : "spline";
+        series.update({
+          type: linearType
+        }, false);
+      }
+    } else if (lineGraph == 2) {
+      series.update({
+        type: "bar"
+      }, false);
+    }
+
+    if (scaleLocation == 1) {
+      series.yAxis.update({
+        opposite: false,
+        visible: true
+      }, false);
+    } else if (scaleLocation == 2) {
+      series.yAxis.update({
+        opposite: true,
+        visible: true
+      }, false);
+    } else if (scaleLocation == 0) {
+      series.yAxis.update({
+        visible: false
+      }, false);
+    }
+
+    var color = model.get("color");
+    series.update({
+      color: color
+    }, false);
+
+    var zIndex = model.get("zIndex");
+    series.update({
+      zIndex: zIndex
+    }, false);
+
+    if (chart.options.boost.enabled) {
+      //draw columns first to put it behind lines
+      chart.series.sort(function (a, b) {
+        if (a.type === "column" && b.type !== "column") {
+          return -1;
+        }
+      })
+    }
+
+    chart.redraw(false);
+
+    //add saved tooltip attributes
+    _.forEach(tooltipAttrs, function (value, key) {
+      $(series.legendItem.element).attr(key, value);
+    });
+
+    //manually bring series with zIndex = 1 to the front
+    for (var i in chart.series) {
+      if (chart.series[i].options && chart.series[i]
+        .options.zIndex === 1 && chart.series[i].group) {
+        chart.series[i].group.toFront();
+      }
+    }
+  };
+
+  /**
+   * Store sensor settings changes in to sensorData
+   *
+   * @param senorData
+   * @param model
+   */
+  this.storeChangesToSensorData = function (sensorData, model) {
+    var legacyData = sensorData.legacyNodeData;
+    // Store changes to legacy sensor data
+    this._storeChangesToSensorData(legacyData, model);
+
+    var maiaData = sensorData.maiaNodeData;
+    // Store changes to maia sensor data
+    this._storeChangesToSensorData(maiaData, model);
+  };
+
+  /**
+   * Store sensor settings changes in to sensorData
+   *
+   * @param senorData
+   * @param model
+   */
+  this._storeChangesToSensorData = function (data, model) {
+    for (var i in data) {
+      var node = data[i];
+      for (var y in node.logicalSensor) {
+        var logicalSensor = node.logicalSensor[y];
+        if (logicalSensor.logicalSensorId == model.get("logicalSensorId")) {
+          for (var z in logicalSensor.sensorDataType) {
+            var sensorDataType = logicalSensor.sensorDataType[z];
+            if (sensorDataType.sensorDataTypeId == model.get(
+              "sensorDataTypeId")) {
+              sensorDataType.graphViewTypeId = model.get("graphViewTypeId");
+              sensorDataType.yscaleLocation = model.get("yscaleLocation");
+              sensorDataType.visible = model.get("visible");
+              sensorDataType.color = model.get("color").toUpperCase();
+            }
+          }
+        }
+      }
+    }
+  };
+
+  /**
+   * Store sensor settings changes in to chartData series
+   *
+   * @param series
+   * @param model
+   */
+  this.storeChangesToSeries = function (series, model) {
+    for (var i = 0; i < series.length; i++) {
+      if (series[i].lsid === model.get('logicalSensorId') && series[i].sdtid ===
+        model.get("sensorDataTypeId")) {
+        series[i].color = model.get('color');
+        series[i].type = model.get('graphViewTypeId') === 1 ? "spline" :
+          "bar";
+        series[i].visible = Boolean(model.get('visible'));
+        series[i].zIndex = model.get('graphViewTypeId') === 1 ? 1 : 0;
+      }
+    }
+  };
+
+  /**
+   * Sync changes to sensor Y Scale location to all sensor of the Group
+   *
+   * @param collection
+   * @param model
+   */
+  this.updateSensorDataScales = function (sensorData, scales) {
+    var legacyData = sensorData.legacyNodeData;
+    this._updateYAxisPosition(legacyData, scales);
+
+    var maiaData = sensorData.maiaNodeData;
+    this._updateYAxisPosition(maiaData, scales);
+  };
+
+  /**
+   * Sync changes to sensor Y Scale location to all sensor of the Group
+   *
+   * @param collection
+   * @param scales
+   */
+  this._updateYAxisPosition = function (data, scales) {
+    for (var i in data) {
+      var node = data[i];
+      for (var y in node.logicalSensor) {
+        var logicalSensor = node.logicalSensor[y];
+        for (var z in logicalSensor.sensorDataType) {
+          var sensorDataType = logicalSensor.sensorDataType[z];
+
+          _.each(scales, function (scale) {
+            if (sensorDataType.yscaleName == scale.metadata.title) {
+              sensorDataType.yscaleLocation = 0;
+              if (scale.visible) {
+                sensorDataType.yscaleLocation = scale.opposite ? 2 : 1;
+              }
+            }
+          });
+        }
+      }
+    }
+  };
+
+  /**
+   * Sync changes to sensor Y Scale location to all sensor of the Group
+   *
+   * @param collection
+   * @param scales
+   */
+  this.updateYAxisPositionForAdmin = function (data, model) {
+    if (data.legacyNodeData != null) {
+      this._updateYAxisPositionForAdmin(data.legacyNodeData, model);
+    }
+    if (data.maiaNodeData != null) {
+      this._updateYAxisPositionForAdmin(data.maiaNodeData, model)
+    }
+  };
+
+  this._updateYAxisPositionForAdmin = function (data, model) {
+    for (var i in data) {
+      var node = data[i];
+      for (var y in node.logicalSensor) {
+        var logicalSensor = node.logicalSensor[y];
+        for (var z in logicalSensor.sensorDataType) {
+          var sensorDataType = logicalSensor.sensorDataType[z];
+          if (sensorDataType.yscaleName == model.get("yscaleName")) {
+            sensorDataType.yscaleLocation = model.get("yscaleLocation");
+          }
+        }
+      }
+    }
+  };
+
+
+  /**
+   * Sync changes to sensor Y Scale location to all sensor of the Group
+   *
+   * @param collection
+   * @param model
+   */
+  this.updateYScalePosition = function (yAxis, model) {
+    yAxis[model.get("yscaleName")] = model.get("yscaleLocation");
+  };
+
+  /**
+   * Converts voltage from V to mV
+   *
+   * @param collection
+   */
+  this.convertYAxisVoltageToMv = function(yAxis) {
+    _.each(yAxis, function (axis) {
+      if (axis.yScaleId === 'Voltage' && axis.metadata.unit === 'V') {
+        axis.min = axis.min * 1000;
+        axis.max = axis.max * 1000;
+        axis.metadata.unit = 'mV';
+      }
+    });
+  }
+  /*
+   * Apply changes to plot chart object
+   *
+   */
+  this.applyChangesToPlotChart = function (model) {
+
+    var id = model.get("iSensorTypeId");
+    var series = wl.app.oPlotChart.chart.get(id);
+
+    var showData = model.get("iVisible");
+    var displayName = this.getLabelUnit(model.get("sYScaleName"), series.yAxis
+      .userOptions.metadata.unit);
+    var collection = wl.app.oPlotChart.oPanel.controller.collection;
+
+    var bGroupRainEt = false;
+    var bRain = false;
+    var bEt = false;
+
+    for (var i in collection.models) {
+      var sensorModel = collection.models[i];
+      if (sensorModel.get("sYScaleName") == "Rain" && sensorModel.get(
+        "iChecked") == 1) {
+        bRain = true;
+      }
+      if (sensorModel.get("sYScaleName") == "ET" && sensorModel.get(
+        "iChecked") == 1) {
+        bEt = true;
+      }
+    }
+
+    bGroupRainEt = bRain && bEt;
+    if (bGroupRainEt) {
+      if (model.get("sYScaleName") == "Rain" || model.get("sYScaleName") ==
+        "ET") {
+        displayName = this.getLabelUnit("Rain/ET", series.yAxis.userOptions.metadata
+          .unit);
+      }
+    }
+
+    if (showData == 1) {
+      series.show();
+      series.yAxis.update({
+        labels: {
+          enabled: true
+        },
+        title: {
+          text: displayName
+        }
+      });
+    } else {
+      series.hide();
+      var iVisible = 0;
+      for (var i in wl.app.oPlotChart.chart.series) {
+        if (wl.app.oPlotChart.chart.series[i].yAxis.options.index == series.yAxis
+          .options.index) {
+          if (wl.app.oPlotChart.chart.series[i].visible == 1) {
+            iVisible = 1;
+          }
+        }
+      }
+      if (iVisible == 0) {
+        series.yAxis.update({
+          labels: {
+            enabled: false
+          },
+          title: {
+            text: ""
+          }
+        });
+      }
+    }
+
+    var lineGraph = model.get("iGraphViewTypeId");
+    if (lineGraph == 1) {
+      series.update({
+        type: "spline"
+      });
+    } else if (lineGraph == 2) {
+      series.update({
+        type: "bar"
+      });
+    }
+
+    var scaleLocation = model.get("iYScaleLocation");
+    if (scaleLocation == 1) {
+      series.yAxis.update({
+        opposite: false
+      });
+    } else if (scaleLocation == 2) {
+      series.yAxis.update({
+        opposite: true
+      });
+    }
+
+    var color = model.get("sColor");
+    series.update({
+      color: color
+    });
+  };
+
+  /*
+   * Convert xAxis Categories form UTC to Local Time
+   * Note : not being used
+   */
+  this.convertUtcCategoriesToLocalTime = function (aUtcCategories) {
+    var aCustomCategories = Array();
+    var timeSpanEl = $(".container-fluid").find('.option.dropdown.timespan');
+    var iTimeSpanId = parseInt(timeSpanEl.attr('data-value'));
+
+    var startDateEl = $(".container-fluid").find(".js-datepicker");
+    var dtStartDate = startDateEl.datepicker("getDate");
+
+    for (var i in aUtcCategories) {
+
+      var oTimestamp = aUtcCategories[i];
+      var oDate = new Date(oTimestamp);
+      var oTimezoneOffset = oDate.getTimezoneOffset() * 60 * 1000;
+
+      if (iTimeSpanId < 5) {
+        var sStartTimeOffset = dtStartDate.getTime() - oTimezoneOffset +
+          3600000;
+        oTimestamp += sStartTimeOffset;
+      } else
+        oTimestamp += oTimezoneOffset;
+
+      var responseDate = dayjs(oTimestamp).format("h:mm a");
+      aCustomCategories[i] = responseDate;
+    }
+    return aCustomCategories;
+  }
+
+  /*
+   * Function to get array of selected sensors objects
+   */
+  this.getSelectedSensors = function () {
+    var sensorListElem = $(".container-fluid").find(".js-sensor:checked");
+    var aSensorList = [];
+
+    sensorListElem.each(function (i, obj) {
+      var $obj = $(obj);
+      aSensorList.push({
+        "logicalSensorId": parseInt($(obj).attr("data-ls")),
+        "sensorDataTypeId": parseInt($(obj).attr("data-sdt")),
+        "dataStructureTypeId": parseInt($(obj).attr("data-st"))
+      });
+    });
+    return aSensorList;
+  }
+
+  /*
+   * Function to get array of unselected sensors objects
+   */
+  this.getUnselectedSensors = function () {
+    var sensorListElem = $(".container-fluid").find(".js-sensor:not(:checked)");
+    var aSensorList = [];
+
+    sensorListElem.each(function (i, obj) {
+      var $obj = $(obj);
+      aSensorList.push({
+        "logicalSensorId": parseInt($(obj).attr("data-ls")),
+        "sensorDataTypeId": parseInt($(obj).attr("data-sdt")),
+        "dataStructureTypeId": parseInt($(obj).attr("data-st"))
+      });
+    });
+    return aSensorList;
+  };
+
+  /**
+   * Function to get series amount for strip charts except selected one
+   */
+  this.getStripChartsSeriesAmount = function (selectedChartId) {
+    var seriesAmount = 0;
+    if (wl.data.chartDataList) {
+      for (var key in wl.data.chartDataList) {
+        if (Number(key) !== selectedChartId) {
+          seriesAmount += wl.data.chartDataList[key].series.length;
+        }
+      }
+    }
+    return seriesAmount;
+  };
+
+  /*
+   * Function to convert chart subtitle to local time
+   * Note : not date-range-control-bar
+   */
+  this.getSubtitle = function (stTimestamp, enTimestamp, iTimeSpan,
+    formatTimeTypeId, formatDateTypeId) {
+    var timeformat = "HH:mm";
+    if (formatTimeTypeId == 1) {
+      timeformat = "hh:mm A";
+    }
+
+    var dateFormat = formatDateTypeId == 2 ? 'DD MMM, YYYY' : 'MMM DD, YYYY';
+    var dateTimeFormat = iTimeSpan <= 7 ? dateFormat + ' ' + timeformat :
+      dateFormat;
+
+    return dayjs(stTimestamp).format(dateTimeFormat) + " to " + dayjs(
+      enTimestamp).format(dateTimeFormat);
+  };
+
+  /**
+   * Get the timezone offset of the user's local pc
+   *
+   * @author    Kenny SAm
+   * @since 2014-12-12
+   *
+   * @since 2014-12-22 Kalin Muskov - added dtCurDate param
+   */
+  this.getPcLocalTimezoneOffsetMilliSec = function () {
+    return -(new Date().getTimezoneOffset() * 60 * 1000);
+  }
+
+  /**
+   * Search the logicalSensor object's sensorDataType to get the offset.
+   *
+   * @author    Kenny Sam
+   * @since    2016-03-15
+   *
+   * @param oLogicalSensor    The LogicalSensor Object
+   *
+   * @return    The offest value
+   */
+  this.getSensorOffset = function (oLogicalSensor) {
+
+    //Since all the offsets are the same fore the sensorDataType, we just need the first one.
+    if (oLogicalSensor) {
+      var sensorObj = _.find(oLogicalSensor.sensorDataType, function (obj) {
+        return obj.hasOwnProperty('offset') && Boolean(obj.offset);
+      });
+    }
+    return sensorObj ? sensorObj.offset : 0;
+  }
+
+  /**
+   * Search the logicalSensor object's sensorDataType to get the happend at timestamp (ts).
+   *
+   * @author    Kenny Sam
+   * @since    2016-03-15
+   *
+   * @param oLogicalSensor    The LogicalSensor Object
+   *
+   * @return    The happend at timestamp
+   */
+  this.getSensorHat = function (oLogicalSensor) {
+
+    //Since all the hat are the same fore the sensorDataType, we just need the first one.
+    if (oLogicalSensor) {
+      var sensorObj = _.find(oLogicalSensor.sensorDataType, function (obj) {
+        return obj.hasOwnProperty('hat') && Boolean(obj.hat);
+      });
+    }
+    return sensorObj ? sensorObj.hat : 0;
+  }
+  /**
+   * check if data is stale
+   *
+   * @param    lastUpdatedTimestamp        This is the local last updated timestamp
+   * @param timezoneOffsetMin                This is the device timezone offset in minutes
+   * @param staleDataBufferSec            This is the stale data buffer in seconds.
+   *
+   * @return boolean  if true - data is stale
+   */
+  this.checkLastUpdatedTime = function (lastUpdatedTimestamp, timezoneOffsetMin,
+    staleDataBufferSec) {
+
+    var timezoneOffsetSec = timezoneOffsetMin * 60;
+    //Set dayjs data to utc.
+    var dtDateNowUtc = dayjs().utcOffset(timezoneOffsetMin);
+    //Add the timezone offset back to get the device local now time.
+    var nowDeviceLocalTimestamp = dtDateNowUtc.unix() + timezoneOffsetSec;
+    var iDiff = nowDeviceLocalTimestamp - lastUpdatedTimestamp;
+    return iDiff > staleDataBufferSec;
+
+  }
+
+  /**
+   * Get compare option
+   *
+   * @author Kalin Muskov
+   * @since 2014-12-15
+   */
+  this.getCompareOption = function () {
+    return $("#js-compare").val();
+  }
+
+  /**
+   * Get timespan option
+   *
+   * @author Kalin Muskov
+   * @since 2014-12-15
+   */
+  this.getTimespanOption = function () {
+    return parseInt($('.option.dropdown.timespan').attr('data-value'));
+  }
+
+  this.getTimespanOptionForAdminChart = function () {
+    return parseInt($('#js-timespan').val());
+  }
+
+  /**
+   * Get datetime format string
+   *
+   * @author Kalin Muskov
+   * @since 2014-12-23
+   */
+  this.getFormatString = function (timespan, dateFormatId, timeFormatId) {
+    var ts = parseInt(timespan);
+
+    var timeFormat = "HH:mm";
+    if (timeFormatId == 1) {
+      timeFormat = "hh:mm A";
+    }
+    var dateFormat = "DD/MM";
+    if (dateFormatId == 1) {
+      dateFormat = "MM/DD";
+    }
+
+    if (ts < 6) {
+      return timeFormat;
+    } else if (ts == 6) {
+      return dateFormat + " " + timeFormat;
+    } else if (ts > 6 && ts < 12) {
+      return dateFormat;
+    } else {
+      return "MM";
+    }
+  }
+
+  /**
+   * Get datetime format fot tooltip
+   *
+   * @author Kalin Muskov
+   * @since 2014-02-12
+   */
+  this.getTooltipFormatString = function (timespan, dateFormatId, timeFormatId) {
+    var ts = parseInt(timespan);
+
+    var dateFormat = "DD/MM/YYYY";
+    if (dateFormatId == 1) {
+      dateFormat = "L";
+    }
+
+    var timeFormat = "HH:mm";
+    if (timeFormatId == 1) {
+      timeFormat = "hh:mm A";
+    }
+
+    if (ts == 0) {
+      return timeFormat;
+    } else if (ts > 8) {
+      return dateFormat;
+    } else {
+      return dateFormat + " " + timeFormat;
+    }
+  };
+
+  /**
+   * Format a number. Period is used if the decimal separator is not provided.
+   * Thousands are not separated if thousands separator is not provided.
+   *
+   * Originally for CarChip Connect
+   *
+   * @author        JW
+   * @since        2013-04-02
+   * @access        public
+   *
+   * @param    <number>    nNumber                The number to format
+   * @param    <integer>    iDecimals            The number of decimal places to show
+   * @param    <string>    sDecimalSep            The decimal separator
+   * @param    <string>    sThousandsSep        The thousands separator
+   *
+   * @return    <string>    The formatted number
+   */
+  this.number = function (nNumber, iDecimals, sDecimalSep, sThousandsSep) {
+    var sNumber = (nNumber + '').replace(/[^0-9+\-Ee.]/g, ''),
+      iShift,
+      nResult,
+      aNumPieces;
+
+    nNumber = (_.isFinite(+sNumber)) ? +sNumber : 0;
+    iDecimals = (_.isFinite(iDecimals)) ? Math.abs(iDecimals) : 0;
+    sDecimalSep = (_.isString(sDecimalSep)) ? sDecimalSep : ".";
+    sThousandsSep = (_.isString(sThousandsSep)) ? sThousandsSep : "";
+
+    // Fixing IE bug where parseFloat(0.55).toFixed(0) = 0;
+    if (iDecimals > 0) {
+      iShift = Math.pow(10, iDecimals);
+      nResult = Math.round(nNumber * iShift) / iShift;
+      aNumPieces = ('' + nResult).split('.');
+    } else {
+      aNumPieces = ('' + Math.round(nNumber)).split('.');
+    }
+
+    if (aNumPieces[0].length > 3) {
+      aNumPieces[0] = aNumPieces[0].replace(/\B(?=(?:\d{3})+(?!\d))/g,
+        sThousandsSep);
+    }
+    if ((aNumPieces[1] || '').length < iDecimals) {
+      aNumPieces[1] = aNumPieces[1] || '';
+      aNumPieces[1] += new Array(iDecimals - aNumPieces[1].length + 1).join(
+        '0');
+    }
+    return aNumPieces.join(sDecimalSep);
+  };
+
+  /**
+   * Give a degree, 0 to 360, return the compass direction that the degree is closest to.
+   *
+   * @author Nicholas Funnell <nickf@davisnet.com>
+   * @since 2014-12-29
+   * @param {type} iDeg
+   * @returns {String}
+   */
+  this.getCardinalFromDeg = function (iDeg) {
+    var aCards = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S',
+      'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW', 'N'
+    ];
+    var iPosition = Math.floor((iDeg) / 22.5);
+    return aCards[iPosition];
+  };
+
+  /**
+   * Get compass direction for anemometer sensor
+   *
+   * @param int iDeg
+   * @returns {String}
+   */
+  this.getCardinalFromDegWithCalm = function (iDeg) {
+    var WIND_DIRECTIONS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+      'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
+    ];
+
+
+    // 2018-02-14 Kenny Sam
+    // No longer returning "calm" but empty string if degree is 0
+    if (iDeg == null) {
+      return "--";
+    } else if (iDeg <= 0.0) {
+      return "";
+    }
+
+    var iPosition = this.getPositionFromDeg(iDeg);
+
+    return WIND_DIRECTIONS[iPosition];
+  };
+
+  /**
+   * Get compass position for anemometer sensor
+   *
+   * @param int iDeg
+   * @returns The position
+   */
+  this.getPositionFromDeg = function (iDeg) {
+
+    var iPosition = 0;
+
+    if (iDeg <= 11.25) { //(0.01, 11.25 )   = N
+      iPosition = 0;
+    } else if (iDeg <= 33.75) { //(11.26,  33.75 ) = NNE
+      iPosition = 1;
+    } else if (iDeg <= 56.25) { //(33.76,  56.25 ) = NE
+      iPosition = 2;
+    } else if (iDeg <= 78.75) { //(56.26,  78.75 ) = ENE
+      iPosition = 3;
+    } else if (iDeg <= 101.25) { //(78.76, 101.25 ) = E
+      iPosition = 4;
+    } else if (iDeg <= 123.75) { //(101.26, 123.75 ) = ESE
+      iPosition = 5;
+    } else if (iDeg <= 146.25) { //(123.76, 146.25 ) = SE
+      iPosition = 6;
+    } else if (iDeg <= 168.75) { //(146.26, 168.75 ) = SSE
+      iPosition = 7;
+    } else if (iDeg <= 191.25) { //(168.76, 191.25 ) = S
+      iPosition = 8;
+    } else if (iDeg <= 213.75) { //(191.26, 213.75 ) = SSW
+      iPosition = 9;
+    } else if (iDeg <= 236.25) { //(213.76, 236.25 ) = SW
+      iPosition = 10;
+    } else if (iDeg <= 258.75) { //(236.26, 258.75 ) = WSW
+      iPosition = 11;
+    } else if (iDeg <= 281.25) { //(258.76, 281.25 ) = W
+      iPosition = 12;
+    } else if (iDeg <= 303.75) { //(281.26, 303.75 ) = WNW
+      iPosition = 13;
+    } else if (iDeg <= 326.25) { //(303.76, 326.25 ) = NW
+      iPosition = 14;
+    } else if (iDeg <= 348.75) { //(326.26, 348.75 ) = NNW
+      iPosition = 15;
+    } else if (iDeg <= 360.00) { //(348.76, 360.00 ) = N
+      iPosition = 0;
+    }
+
+    return iPosition;
+  };
+
+  /**
+   * format degree value according to decimal separator from account settings
+   * @param data - degree value
+   * @param userAccountSetting
+   * @returns string
+   */
+  this.formatWindDirectionDeg = function (data, userAccountSetting) {
+    var iDecPlaces = (data % 1) !== 0 ? data.toString().split(".")[1].length :
+      0;
+    if (iDecPlaces > 0) {
+      if (userAccountSetting.formatNumberTypeId === 1) {
+        //period as decimal
+        return this.number(data, iDecPlaces, ".", ",");
+      } else {
+        //comma as decimal
+        return this.number(data, iDecPlaces, ",", ".");
+      }
+    }
+    return data;
+  }
+
+  /**
+   * Give a degree, 0 to 360, return the compass direction that the degree is closest to.
+   *
+   * @author    Kenny Sam
+   * @since    2017-08-16
+   * @param    <int>    iPosition
+   * @returns <double> the wind direction degree
+   */
+  this.getWindDegreeFromPosition = function (iPosition) {
+    return iPosition * 22.5;
+  };
+
+  this.formatLoopHiLowDataDefaultDecimalPlaces = function (sFieldName, data) {
+
+    var iDecPlaces = -1;
+
+
+    switch (sFieldName) {
+
+
+      /*** 0 decimal places ***/
+      //Loop
+      case "hum_in":
+      case "hum_out":
+      case "solar_rad":
+      //Hi/Low
+      case "hum_in_hi":
+      case "hum_in_low":
+      case "hum_out_hi":
+      case "hum_out_low":
+      case "solar_rad_hi":
+      case "extra_hum":
+      case "extra_hum_hi":
+      case "extra_hum_low":
+      case "leaf_wetness":
+      case "leaf_wetness_hi":
+      case "leaf_wetness_low":
+      case "soil_moist":
+      case "soil_moist_hi":
+      case "soil_moist_low":
+        iDecPlaces = 0;
+        break;
+
+      /*** 1 decimal places ***/
+      //Loop
+      case "wind_speed":
+      case "temp_in":
+      case "temp_out":
+      case "temp_heat":
+      case "temp_chill":
+      case "temp_dew":
+      case "uv":
+      //Hi/Low
+      case "wind_speed_hi":
+      case "chill_low":
+      case "heat_hi":
+      case "dew_hi":
+      case "dew_low":
+      case "temp_in_hi":
+      case "temp_in_low":
+      case "temp_out_hi":
+      case "temp_out_low":
+      case "dew_hi":
+      case "dew_low":
+      case "chill_low":
+      case "heat_hi":
+      case "uv_hi":
+      case "extra_temp":
+      case "extra_temp_hi":
+      case "extra_temp_low":
+      case "soil_temp":
+      case "soil_temp_hi":
+      case "soil_temp_low":
+        iDecPlaces = 1;
+        break;
+
+      /*** 2 decimal places ***/
+      //Loop
+      case "rain_day": //2 decimal
+      case "rain_month":
+      case "rain_year":
+      case "rain_storm":
+      case "rain_rate":
+        iDecPlaces = 2;
+        break;
+
+
+      /*** 3 decimal places ***/
+      //Loop
+      case "barometer": //3 decimal
+      case "barometer_trend":
+      case "bar_day_high":
+      case "bar_day_low":
+      case "et":
+      case "et_day":
+      case "et_month":
+      case "et_year":
+        iDecPlaces = 3;
+        break;
+
+      default:
+        //No formatting needed
+        //console.warn("utils formatter, no decimal place info for " + sFieldName);
+        return data;
+    }
+
+    //Format the data to the proper decimal places
+    //BUG BUG - need to get decimal and thousands separator from the user settings.
+    return Utils.number(data, iDecPlaces, ".", ",");
+  };
+
+  this.formatArchiveDataDefaultDecimalPlaces = function (sDbColumnName, data,
+    iFormatNumberTypeId) {
+    if (data == null) {
+      return data;
+    }
+    var iDecPlaces = -1;
+    //We only need to format integer,floats, and doubles.
+    if (typeof data != "string") {
+      switch (sDbColumnName) {
+
+        /*** special ***/
+        case "iWindDirOfPrevail":
+        case "iWindDirOfHi":
+          //BUG BUG - need to convert this to string directions
+          return Utils.getCardinalFromPosition(data);
+          break;
+
+        /*** 0 decimal places ***/
+        case "iHumOut":
+        case "iHumIn":
+        case "iHumExtra1":
+        case "iHumExtra2":
+        case "iSolarRadAvg":
+        case "iSolarRadHi":
+        case "iMoistSoil1":
+        case "iMoistSoil2":
+        case "iMoistSoil3":
+        case "iMoistSoil4":
+        case "iWetLeaf1":
+        case "iWetLeaf2":
+          iDecPlaces = 0;
+          break;
+
+        /*** 2 decimal places ***/
+        case "dRainfall":
+        case "dRainRateHi":
+        case "dSolarEnergy":
+        case "dUvDose":
+        case "dEmc":
+        case "dWindRun":
+          iDecPlaces = 2;
+          break;
+
+        /*** 3 decimal places ***/
+        case "dBar":
+        case "dDegDaysHeat":
+        case "dDegDaysCool":
+        case "dEt":
+          iDecPlaces = 3;
+          break;
+
+        /*** 4 decimal places ***/
+        case "dAirDensity":
+          iDecPlaces = 4;
+          break;
+
+        /*** 1 decimal places ***/
+        default:
+          iDecPlaces = 1;
+      }
+    }
+
+    if (iDecPlaces >= 0) {
+      //Format the data to the proper decimal places
+      if (iFormatNumberTypeId == 1) {
+        //period as decimal
+        return Utils.number(data, iDecPlaces, ".", ",");
+      } else {
+        //comma as decimal
+        return Utils.number(data, iDecPlaces, ",", ".");
+      }
+    } else {
+      //Data doesn't need to be formatted.
+      return data;
+    }
+  };
+
+  this.formatMaiaDataDefaultDecimalPlaces = function (iSensorTypeId,
+    sDbColumnName, data, iFormatNumberTypeId) {
+    if (data == null) {
+      return data;
+    }
+    var iDecPlaces = -1;
+    //We only need to format integer,floats, and doubles.
+    if (typeof data != "string") {
+      if (iSensorTypeId == 100 || iSensorTypeId == 101) { // Temp/Hum Sensor
+        switch (sDbColumnName) {
+          case "f1": // High Temp
+          case "f2": // Low Temp
+          case "f3": // Avg Temp
+          case "f4": // Temp
+            iDecPlaces = 1;
+            break;
+
+          case "f5": // High Hum
+          case "f6": // Low Hum
+          case "f7": // Avg Hum
+          case "f8": // Hum
+            iDecPlaces = 0;
+            break;
+        }
+      }
+
+      if (iDecPlaces >= 0) {
+        //Format the data to the proper decimal places
+        if (iFormatNumberTypeId == 1) {
+          //period as decimal
+          return Utils.number(data, iDecPlaces, ".", ",");
+        } else {
+          //comma as decimal
+          return Utils.number(data, iDecPlaces, ",", ".");
+        }
+      } else {
+        //Data doesn't need to be formatted.
+        return data;
+      }
+    }
+  };
+
+  this.getAccountUnitsByDataName = function (accountSettings, dataName, ecUnit,
+    soilUnit) {
+    var index = dataName.indexOf(dataName.match(/\d/));
+    if (index > 0 && dataName !== "CO2") {
+      dataName = $.trim(dataName.substring(0, index - 1));
+    }
+
+    switch (dataName) {
+      //Temperature
+      case "Temp":
+      case "High Temp":
+      case "Low Temp":
+      case "Avg Temp":
+      case "Temp Ring":
+      case "Soil Temperature":
+      case "Dew Point":
+      case "Wind Chill":
+      case "Heat Index":
+      case "THW Index":
+      case "THSW Index":
+      case "Temperature":
+      case "temp_spread":
+        return "&deg;" + Utils.getAccountTempUnit(accountSettings.unitsTempTypeId);
+        break;
+
+      //wind speed
+      case "Wind Speed":
+      case "High Wind Speed":
+        return Utils.getAccountWindUnit(accountSettings.unitsWindTypeId);
+        break;
+
+      //wind run
+      case "Wind Run":
+        return Utils.getAccountWindRunUnit(accountSettings.unitsWindTypeId);
+        break;
+
+      //humidity
+      case "Humidity":
+      case "Hum":
+      case "High Hum":
+      case "Low Hum":
+      case "Avg Hum":
+      case "Hum Ring":
+        return "%";
+        break;
+
+      //rain
+      case "Rain":
+      case "ET":
+        return Utils.getAccountRainEtUnit(accountSettings.unitsRainEtTypeId);
+        break;
+
+      //rain rate
+      case "Rain Rate":
+        return Utils.getAccountRainEtUnit(accountSettings.unitsRainEtTypeId) +
+          "/h";
+        break;
+
+      //soil moisture
+      case "Soil Moisture":
+        if (soilUnit) {
+          return this.getAccountSoilUnit(soilUnit, accountSettings.unitsSoilMoistureTypeId);
+        } else return "%";
+        break;
+      case "ISS Reception":
+        return "%";
+        break;
+
+      //barometer
+      case "Barometer":
+        return Utils.getAccountBarUnit(accountSettings.unitsBarTypeId);
+        break;
+
+      //solar rad
+      case "Solar Radiation":
+      case "Solar Rad":
+      case "High Solar Radiation":
+      case "High Solar Rad":
+        return "W/m²";
+        break;
+
+      //salinity
+      case "Soil Salinity":
+      case "EC":
+        if (ecUnit) {
+          return this.getAccountEcUnit(ecUnit)
+        } else return "dS/m";
+        break;
+
+      //Solar energy
+      case "solar_energy":
+        return "Ly";
+        break;
+
+      //flow
+      case "Flow":
+      case "Flow Sum":
+        return Utils.getAccountFlowUnit(accountSettings.unitsFlowTypeId);
+
+      //Water Pressure
+      case "Water Pressure":
+      case "Pressure":
+      case "Fluid Pressure":
+        return Utils.getAccountPressureUnit(accountSettings.unitsPressureTypeId);
+
+      //Water Depth
+      case "Depth":
+        return Utils.getAccountWaterDepthUnit(accountSettings.unitsWaterDepthTypeId);
+
+      case "UV Dose":
+        return "MEDs";
+
+      case "PAR":
+        return "μmol/m²s";
+
+      case "DLI":
+        return "mol/m²";
+
+      case "Voltage":
+        return "V";
+
+      case "CO2":
+        return "ppm";
+
+      case "AQS":
+      case "Particulate Matter":
+        return "μg/m³";
+
+      case "Weight":
+        return Utils.getAccountWeightUnit(accountSettings.unitsWeightTypeId);
+    }
+    return "";
+  }
+
+  /**
+   * Give a position, 0 to 15, return the compass direction of that position.
+   *
+   * @author Kenny SAm
+   * @since 2014-12-29
+   * @param    {int} iPos
+   * @returns {String}    The string compase direction
+   */
+  this.getCardinalFromPosition = function (iPos) {
+    //Check for dashed value.
+    if (iPos == 255) {
+      return "--"
+    }
+    var aCards = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S',
+      'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
+    ];
+    return aCards[iPos];
+  };
+
+  /**
+   * Get tickInterval for x Axis
+   *
+   * @author Kalin Muskov
+   * @since 2014-12-30
+   */
+  this.getTickInterval = function (timespan, startTs, endTs) {
+    var ts = parseInt(timespan);
+    var tickInterval = null;
+    var dayTs = 24 * 60 * 60 * 1000;
+
+    if (ts == 1) { //1hour
+      tickInterval = 1800000; // 30 min archive interval
+    } else if (ts == 2 || ts == 3 || ts == 4) { //4/8/12 hour
+      tickInterval = 1 * 60 * 60 * 1000;
+    } else if (ts == 5) { //Day
+      tickInterval = 2 * 60 * 60 * 1000;
+    } else if (ts == 6) { //3Day
+      tickInterval = 3 * 60 * 60 * 1000;
+    } else if (ts >= 7 && ts <= 9) { // week / 2 weeks / month
+      tickInterval = 24 * 60 * 60 * 1000;
+    } else if (ts == 10) { // 3 months
+      tickInterval = (endTs - startTs) / 12 < dayTs * 7 ? dayTs * 7 : (endTs - startTs) / 12 //weeks
+    } else if (ts == 11) { // 6 months
+      tickInterval = (endTs - startTs) / 24 < dayTs * 7 ? dayTs * 7 : (endTs - startTs) / 24 //weeks
+    } else if (ts == 12) { //year
+      tickInterval = (endTs - startTs) / 12 < dayTs * 30 ? dayTs * 30 : (endTs - startTs) / 12 //months
+    }
+    return tickInterval;
+  }
+
+  /**
+   * Get tickInterval for zoomed X axis area
+   *
+   * @author Anton Milko
+   * @since 2017-12-27
+   */
+  this.getZoomedTickInterval = function (zoomedTs) {
+    var tickInterval = null;
+
+    if (zoomedTs <= 3600000) { // 1hour
+      tickInterval = 1800000; // 30 min archive interval
+    } else if (zoomedTs <= 43200000) { // 4/8/12 hour
+      tickInterval = 1 * 60 * 60 * 1000;
+    } else if (zoomedTs <= 86400000) { // Day
+      tickInterval = 2 * 60 * 60 * 1000;
+    } else if (zoomedTs <= 259200000) { // 3Day
+      tickInterval = 3 * 60 * 60 * 1000;
+    } else if (zoomedTs <= 2592000000) { // week / 2 weeks / month
+      tickInterval = 24 * 60 * 60 * 1000;
+    } else if (zoomedTs <= dayjs.duration(6, 'M').asMilliseconds()) { // 3 months / 6 months
+      tickInterval = 24 * 60 * 60 * 1000 * 7;
+    } else if (zoomedTs <= dayjs.duration(1, 'y').asMilliseconds()) { // year
+      tickInterval = 30 * 24 * 60 * 60 * 1000;
+    }
+    return tickInterval;
+  }
+
+  /**
+   * Get timespanId of zoomed X axis area
+   *
+   * @author Anton Milko
+   * @since 2017-12-27
+   */
+  this.getZoomedTimespan = function (zoomedTs) {
+    var timespanId = null;
+
+    if (zoomedTs <= 3600000) { // 1hour
+      timespanId = 1; // 30 min archive interval
+    } else if (zoomedTs <= 43200000) { // 4/8/12 hour
+      timespanId = 2;
+    } else if (zoomedTs <= 86400000) { // Day
+      timespanId = 5;
+    } else if (zoomedTs <= 259200000) { // 3Day
+      timespanId = 6;
+    } else if (zoomedTs <= 2592000000) { // week / 2 weeks / month
+      timespanId = 7;
+    } else if (zoomedTs <= dayjs.duration(6, 'M').asMilliseconds()) { // 3 months / 6 months
+      timespanId = 10;
+    } else if (zoomedTs <= dayjs.duration(1, 'y').asMilliseconds()) { // year
+      timespanId = 12;
+    }
+    return timespanId;
+  }
+
+  /**
+   * Get formatted xAxis labels for Overlay chart
+   *
+   * @author Kalin Muskov
+   * @since 2014-12-31
+   */
+  this.formatLabelForOverlayChart = function (lStartTimestamp, lEndTimestamp,
+    iTimeSpan) {
+    var formatStr = "l";
+    if (iTimeSpan < 6) {
+      formatStr = "l hh:mm A";
+    }
+    return dayjs(lStartTimestamp).format(formatStr) + " to " + dayjs(
+      lEndTimestamp).format(formatStr);
+  }
+
+  /**
+   * Get unit for yAxis label
+   *
+   * @author Kalin Muskov
+   * @since 2015-1-7
+   *
+   * @param sLabel yAxis label name
+   * @param sUnit yAxis unit name
+   *
+   * @return string
+   */
+  this.getLabelUnit = function (sLabel, sUnit) {
+    if (sUnit == "F" || sUnit == "C") {
+      sUnit = String.fromCharCode(parseInt("00b0", 16)) + sUnit;
+    }
+    if (sUnit == "W/m") {
+      sUnit = sUnit + String.fromCharCode(parseInt("00b2", 16));
+    }
+    if (sLabel.indexOf("Soil Moisture") >= 0) {
+      return sLabel;
+    }
+    if (sUnit === "VIC" || sUnit === "dS/m") {
+      if (sLabel.length > 0) {
+        return sLabel;
+      }
+      return sUnit;
+    }
+    return sLabel + " " + sUnit;
+  }
+
+  /**
+   * Barometer Trend as string
+   */
+  //-------------------------------------
+  this.getBarometerTrendAsString = function (iBarTrend) {
+    var sBarTrend = "";
+
+    switch (iBarTrend) {
+      case 0:
+        sBarTrend = "<span data-l10n-id-'barometer_forecast_3'>Steady</span>";
+        break;
+      case 20:
+        sBarTrend =
+          "<span data-l10n-id-'barometer_forecast_4'>Rising Slowly</span>";
+        break;
+      case 60:
+        sBarTrend =
+          "<span data-l10n-id-'barometer_forecast_5'>Rising Rapidly</span>";
+        break;
+      case 196:
+        sBarTrend =
+          "<span data-l10n-id-'barometer_forecast_1'>Falling Rapidly</span>";
+        break;
+      case 236:
+        sBarTrend =
+          "<span data-l10n-id-'barometer_forecast_2'>Falling Slowly</span>";
+        break;
+    }
+
+    return sBarTrend;
+  }
+  // returns the l20n-id for the given bar trend
+  this.getBarometerTrendAsId = function (iBarTrend) {
+    var sBarTrend = "";
+    switch (iBarTrend) {
+      case 0:
+        sBarTrend = 'barometer_forecast_3';
+        break;
+      case 20:
+        sBarTrend = 'barometer_forecast_4';
+        break;
+      case 60:
+        sBarTrend = 'barometer_forecast_5';
+        break;
+      case 196:
+        sBarTrend = 'barometer_forecast_1';
+        break;
+      case 236:
+        sBarTrend = 'barometer_forecast_2';
+        break;
+    }
+
+    return sBarTrend;
+  }
+  /**
+   * Converts times from Hilow packet (For Legacy devices we used Davis Time not UTC)
+   * @timestr time string like 1428 - (24h)14:28 or (12h)2:28PM
+   *
+   * @return string
+   */
+  this.getTimeStringForSystemSummary = function (timestr, formatTimeType) {
+    if (formatTimeType == undefined) {
+      formatTimeType = wl.data.userAccountSetting.formatTimeTypeId;
+    }
+    var newStr = String(timestr);
+    if (timestr === 65535 || timestr === "--" || timestr == null) {
+      return "--";
+    }
+
+
+    if (timestr === 0) {
+      if (formatTimeType == 1) {
+        return "12:00 AM";
+      } else {
+        return "00:00";
+      }
+    }
+
+    var length = newStr.length;
+    var min = newStr.substr(-2);
+    var hour = newStr.substr(0, length - 2);
+
+    if (min.length == 1) {
+      min = "0" + min;
+    }
+
+    if (formatTimeType == 1) {
+      var meridian = "AM";
+
+      if (hour.length > 0) {
+        if (hour >= 12) {
+          meridian = "PM";
+          if (hour >= 13) {
+            hour -= 12;
+          }
+        }
+      } else {
+        hour = 12;
+      }
+      return hour + ":" + min + " " + meridian;
+    } else {
+      var prefix = "";
+      if (hour < 10) {
+        prefix = "0";
+      }
+      return prefix + hour + ":" + min;
+    }
+  }
+
+  /**
+   * Toggle sensor option dialog buttons
+   *
+   * @param elem1 jquery object
+   * @param elem2 jquery object
+   *
+   */
+  this.toggleDialogButtons = function (elem1, elem2) {
+    elem1.removeClass("btn-default").addClass("btn-primary active");
+    elem2.removeClass("btn-primary active").addClass("btn-default");
+  }
+
+  /**
+   * Sync changes to sensor Y Scale location to all sensor of the Group
+   *
+   * @param collection
+   * @param model
+   */
+  this.syncAllModelsYAxisPosition = function (collection, model) {
+    for (var i in collection.models) {
+      var sensor = collection.models[i];
+
+      if (sensor.get("sYScaleName") == model.get("sYScaleName")) {
+        sensor.set({
+          "iYScaleLocation": model.get("iYScaleLocation")
+        });
+      }
+
+      if (model.get("sYScaleName") == "Rain") {
+        if (sensor.get("sYScaleName") == "ET") {
+          sensor.set({
+            "iYScaleLocation": model.get("iYScaleLocation")
+          });
+        }
+      } else if (model.get("sYScaleName") == "ET") {
+        if (sensor.get("sYScaleName") == "Rain") {
+          sensor.set({
+            "iYScaleLocation": model.get("iYScaleLocation")
+          });
+        }
+      }
+    }
+  };
+
+  /**
+   * Build a "Sliding Scale"
+   * @param {type} iValue
+   * @param {type} aStops
+   * @returns {UtilsClass.slidingScaleMax.aStops|Array}
+   */
+  this.slidingScaleMax = function (iValue, aStops) {
+    if (!aStops) {
+      aStops = [1, 5, 10, 15, 20, 25, 50, 100, 200, 300, 400, 500, 750, 1000,
+        2000, 3000
+      ];
+    }
+    for (var i = 0; i < aStops.length; i++) {
+      if (iValue < aStops[i]) {
+        return aStops[i];
+      }
+    }
+    return iValue;
+  };
+
+  /**
+   * Get time from time picker as string "1:00 AM"
+   * @returns {*|jQuery}
+   */
+  this.getTimeStringFromTimePicker = function () {
+    return $("#js-timepicker").val();
+  }
+
+  /*
+   * Apply changes to overlay chart object
+   *
+   */
+  this.applyChangesToOverlayChart = function (model) {
+
+    var id = model.get("iSensorTypeId");
+    var series = wl.app.oOverlayChart.chart.get(id);
+
+    var lineGraph = model.get("iGraphViewTypeId");
+    if (lineGraph == 1) {
+      series.update({
+        type: "spline"
+      });
+    } else if (lineGraph == 2) {
+      series.update({
+        type: "bar"
+      });
+    }
+
+    var color = model.get("sColor");
+    series.update({
+      color: color
+    });
+  }
+
+  /*
+   * Apply changes to strip chart object
+   *
+   */
+  this.applyChangesToStripChart = function (model) {
+
+    var id = model.get("iSensorTypeId");
+    var series = wl.app.oStripChart.chart.get(id);
+
+    var color = model.get("sColor");
+    series.update({
+      color: color
+    });
+  }
+
+  /*
+   * Format wind direction
+   *
+   */
+  this.formatWindDirection = function (value, name) {
+    var direction = value;
+    if (name == "Wind Direction" || name == "High Wind Direction") {
+      direction = this.getCardinalFromPositionForCharts(value);
+    }
+    return direction;
+  }
+
+  /**
+   * Give a position, 0 to 7, return the compass direction of that position.
+   *
+   * @author Kalin Muskov
+   * @since 2015-02-17
+   * @param    {int} iPos
+   * @returns {String}    The string compass direction
+   */
+  this.getCardinalFromPositionForCharts = function (iPos) {
+    if (iPos == -1) {
+      return "";
+    }
+    var aCards = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S",
+      "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
+    ];
+    return aCards[iPos];
+  };
+
+  /**
+   * Check sensor data for dash values
+   *
+   * @author Kalin Muskov
+   * @since 2015-02-19
+   * @param field sensor db field name
+   * @param value sensor value
+   *
+   * @return boolean
+   */
+  this.dashFilterCheck = function (field, value) {
+
+    if (value == null) {
+      return false;
+    }
+
+    var dashValues = {
+      "d_bar": 32767,
+      "d_dew_pt_in": 32768,
+      "d_dew_pt_out": 32767,
+      "d_dew_pt_out_hi": 32768,
+
+      "d_et": -99999,
+      "d_heat_index_in": -99999,
+      "d_heat_index_out": 32768,
+
+      "d_wet_bulb": 32767,
+
+      "d_solar_energy": -99999,
+      "d_temp_extra": 255,
+      "d_temp_in": 32767,
+      "d_temp_leaf": 255,
+      "d_temp_out": 32767,
+      "d_temp_out_hi": 32768,
+      "d_temp_out_low": 32767,
+      "d_temp_soil": 255,
+      "d_rain_rate_hi": -99999,
+      "d_rainfall": -99999,
+
+      "d_uv_dose": -99999,
+      "d_uv_index_avg": 255,
+      "d_wind_chill": 32767,
+      "d_wind_run": -99999,
+
+      "i_hum_extra": 255,
+      "i_hum_in": 255,
+      "i_hum_out": 255,
+      "i_moist_soil": 255,
+      "i_solar_rad_avg": 32767,
+      "i_solar_rad_hi": 32767,
+      "i_wet_leaf": 255,
+      "i_wind_dir_of_hi": 255,
+      "i_wind_dir_of_prevail": 32767,
+      "i_wind_run": 0,
+      "i_wind_speed_avg": 255,
+      "i_wind_speed_hi": 0,
+      "_255": 255
+    };
+
+    if (dashValues[field] == value) {
+      return false;
+    }
+    return true;
+  }
+
+  this.getAccountDateFormat = function (iFormatDateTypeId) {
+    var format = "DD/MM/YYYY";
+    if (iFormatDateTypeId == 1) {
+      format = "MM/DD/YYYY";
+    }
+    return format;
+  };
+
+  this.getFullDateFormat = function (iFormatDateTypeId) {
+    var format = "D MMMM, YYYY";
+    if (iFormatDateTypeId == 1) {
+      format = "MMMM D, YYYY";
+    }
+    return format;
+  };
+
+  this.getFullAccountTimeFormat = function (iFormatTimeTypeId) {
+    var format = "HH:mm";
+    if (iFormatTimeTypeId == 1) {
+      format = "h:mm A";
+    }
+    return format;
+  };
+
+  this.getAccountTimeFormat = function (iFormatTimeTypeId) {
+    var format = "24 HR";
+    if (iFormatTimeTypeId == 1) {
+      format = "AM/PM";
+    }
+    return format;
+  };
+
+  this.getAccountNumberFormat = function (iFormatNumberTypeId) {
+    var format = "1.000,00";
+    if (iFormatNumberTypeId == 1) {
+      format = "1,000.00";
+    }
+    return format;
+  };
+
+  this.getAccountTempUnit = function (iUnitsTempTypeId) {
+    var unit = "C";
+    if (iUnitsTempTypeId == 1) {
+      unit = "F";
+    }
+    return unit;
+  };
+
+  this.getAccountRainEtUnit = function (iUnitsRainEtTypeId) {
+    var unit = "mm";
+    if (iUnitsRainEtTypeId == 1) {
+      unit = "in";
+    }
+    return unit;
+  };
+
+  this.getAccountElevUnit = function (iUnitsElevTypeId) {
+    var unit = "meters";
+    if (iUnitsElevTypeId == 1) {
+      unit = "feet";
+    }
+    return unit;
+  };
+
+  this.getAccountBarUnit = function (iUnitsBarTypeId) {
+    var unit = "hPa";
+    if (iUnitsBarTypeId == 1) {
+      unit = "in Hg";
+    } else if (iUnitsBarTypeId == 2) {
+      unit = "mm Hg";
+    } else if (iUnitsBarTypeId == 3) {
+      unit = "mb";
+    }
+    return unit;
+  };
+
+  this.getAccountWindUnit = function (iUnitsWindTypeId) {
+    var unit = "m/s";
+    if (iUnitsWindTypeId == 1) {
+      unit = "mph";
+    } else if (iUnitsWindTypeId == 2) {
+      unit = "knots";
+    } else if (iUnitsWindTypeId == 3) {
+      unit = "km/h";
+    }
+    return unit;
+  };
+  this.getAccountWindRunUnit = function (iUnitsWindTypeId) {
+    var unit = "n mi";
+    if (iUnitsWindTypeId == 1) {
+      unit = "mi";
+    } else if (iUnitsWindTypeId == 3) {
+      unit = "km";
+    } else if (iUnitsWindTypeId == 4) {
+      unit = "m";
+    }
+    return unit;
+  };
+
+  this.getAccountPressureUnit = function (iUnitsPressureTypeId) {
+    var unit = "psi";
+    if (iUnitsPressureTypeId == 2) {
+      unit = "kg/cm²";
+    } else if (iUnitsPressureTypeId == 3) {
+      unit = "bar";
+    }
+    return unit;
+  };
+
+  this.getAccountWaterDepthUnit = function (iUnitsWaterDepthTypeId) {
+    var unit = "ft";
+    if (iUnitsWaterDepthTypeId == 2) {
+      unit = "m";
+    } else if (iUnitsWaterDepthTypeId == 3) {
+      unit = "in";
+    } else if (iUnitsWaterDepthTypeId == 4) {
+      unit = "cm";
+    }
+    return unit;
+  };
+
+  this.getAccountFlowUnit = function (iUnitsFlowTypeId) {
+    var unit = "gal";
+    if (iUnitsFlowTypeId == 2) {
+      unit = "L";
+    } else if (iUnitsFlowTypeId == 3) {
+      unit = "m<sup>3</sup>";
+    } else if (iUnitsFlowTypeId == 4) {
+      unit = "ac-ft";
+    }
+    return unit;
+  };
+
+  this.getAccountDecimalFormat = function (iFormatDecimalTypeId) {
+    var format = "100.0";
+    if (iFormatDecimalTypeId == 1) {
+      format = "100";
+    }
+    return format;
+  };
+
+  this.getAccountEcUnit = function (sEcUnit) {
+    if (sEcUnit == "vic") {
+      return "VIC";
+    } else if (sEcUnit == "dsm") {
+      return "dS/m";
+    }
+    return "";
+  };
+
+  this.getAccountSoilUnit = function (sSoilUnit, iUnitsSoilMoistureTypeId) {
+    if (sSoilUnit == "pct") {
+      return "%";
+    } else if (iUnitsSoilMoistureTypeId == 1) {
+      return "kPa";
+    } else if (iUnitsSoilMoistureTypeId == 2) {
+      return "bar";
+    } else if (iUnitsSoilMoistureTypeId == 3) {
+      return "cb";
+    }
+    return sSoilUnit;
+  };
+
+  this.getAccountWeightUnit = function (iUnitsWeightTypeId) {
+    var unit = "g";
+    if (iUnitsWeightTypeId == 1) {
+      unit = "oz";
+    } else if (iUnitsWeightTypeId == 2) {
+      unit = "lb";
+    } else if (iUnitsWeightTypeId == 4) {
+      unit = "kg";
+    }
+    return unit;
+  };
+
+  this.getCountryNameById = function (iCountryId, aCountries) {
+
+    var name = "";
+    _.each(aCountries, function (oCountry) {
+      if (oCountry.countryId == iCountryId) {
+        name = oCountry.countryName;
+      }
+    });
+    return name;
+  };
+
+  /**
+   * This is a utility class for rendering dates, times and floating point numbers.
+   * @author Brian Hoover
+   * @since April 17, 2015
+   *
+   * settings is an object that requires the following fields:
+   * formatNumberTypeId
+   * formatDateTypeId
+   * formatTimeTypeId
+   *
+   **/
+  this.RenderUtils = function (settings) {
+    this.numberFormat = Utils.getAccountNumberFormat(settings.formatNumberTypeId);
+    this.dateFormatFormat = Utils.getFullDateFormat(settings.formatDateTypeId);
+    this.timeFormatFormat = Utils.getFullAccountTimeFormat(settings.formatTimeTypeId);
+    this.accountDateFormatFormat = Utils.getAccountDateFormat(settings.formatDateTypeId);
+    this.decimalSeparator = settings.formatNumberTypeId === 1 ? "." : ",";
+    this.thousandsSeparator = settings.formatNumberTypeId === 1 ? "," : ".";
+  };
+
+  /**
+   * Takes a java ts (integer) and parses it into a date, based on the initialized
+   * settings.
+   *
+   * @param ts - the Java TimeStamp
+   * @param invalidString - The string to return if the date is invalid.  in general, this will be for a null case.
+   */
+  this.RenderUtils.prototype.toDate = function (ts, invalidString) {
+    var date = dayjs(new Date(parseInt(ts)));
+    if (!date.isValid()) {
+      return invalidString;
+    }
+    return date.format(this.dateFormatFormat);
+  }
+
+  /**
+   * Takes a java ts (integer) and parses it into a datetime, based on the initialized
+   * settings.
+   *
+   * @param ts - the Java TimeStamp
+   * @param invalidString - The string to return if the date is invalid.  in general, this will be for a null case.
+   */
+  this.RenderUtils.prototype.toDateTime = function (ts, invalidString) {
+    var date = dayjs(new Date(parseInt(ts)));
+    if (!date.isValid()) {
+      return invalidString;
+    }
+    return date.format(this.dateFormatFormat +
+      ' ' + this.timeFormatFormat);
+  }
+
+  this.RenderUtils.prototype.toAccountDateTime = function (ts, invalidString) {
+    var date = dayjs(ts).utc();
+    if (!date.isValid()) {
+      return invalidString;
+    }
+
+    return date.format(this.accountDateFormatFormat + ' - ' + this.timeFormatFormat);
+  }
+
+  /**
+   * Takes a number and formats it.  The precision is set by the number itself
+   *
+   * @param number
+   */
+  this.RenderUtils.prototype.formatNumber = function (number) {
+    if (typeof number === 'number') {
+      number = number.toString();
+    }
+    var splitArray = number.toString().split('.');
+    var precision = 0;
+    if (splitArray.length === 2) {
+      precision = splitArray[1].length;
+    }
+    return _formatNumber(number, precision, this.thousandsSeparator, this.decimalSeparator);
+  }
+
+  this.RenderUtils.prototype.formatNumberWithPrecision = function (number,
+    precision) {
+    return _formatNumber(number, precision, this.thousandsSeparator, this.decimalSeparator);
+  }
+
+  function _formatNumber(number, precision, thousandsSeparator,
+    decimalSeparator) {
+    return accounting.formatNumber(number, precision, thousandsSeparator,
+      decimalSeparator);
+  }
+
+  /**
+   * Returns day of the date
+   * @param date
+   * @returns {*}
+   */
+  this.getDayFromDate = function (date) {
+
+    var date = dayjs(new Date(date));
+    if (!date.isValid()) {
+      return "&nbsp;"
+    }
+    return dayjs(date).date();
+  };
+
+  /**
+   * Returns hours from the date
+   * @param date
+   * @returns {*}
+   */
+  this.getHoursFromDate = function (date) {
+    var date = dayjs(new Date(date));
+    if (!date.isValid()) {
+      return "&nbsp;"
+    }
+    return dayjs(date).hour();
+  };
+
+  /**
+   * Returns minutes from the date
+   * @param date
+   * @returns {*}
+   */
+  this.getMinutesFromDate = function (date) {
+    var date = dayjs(new Date(date));
+    if (!date.isValid()) {
+      return "&nbsp;"
+    }
+    return dayjs(date).minute();
+  };
+
+  /**
+   * Returns three letters month abbr from date
+   * @param date
+   * @returns {string}
+   */
+  this.getMonthFromDate = function (date) {
+    var monthAbbr = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG",
+      "SEP", "OCT", "NOV", "DEC"
+    ];
+    return monthAbbr[dayjs(date).month()];
+  };
+
+  /*
+   * Format uptime health value
+   *
+   */
+  this.formatUptime = function (value) {
+    return this.getUptimeSecondsAsString(value);
+  }
+
+  /**
+   * Returns human readable string representation of device uptime
+   * @param seconds
+   * @returns {*}
+   */
+  this.getUptimeSecondsAsString = function (seconds) {
+    //var numYears = Math.floor(seconds / 31536000);
+    var numDays = Math.floor((seconds % 31536000) / 86400);
+    var numHours = Math.floor(((seconds % 31536000) % 86400) / 3600);
+    var numMinutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
+    //var numSeconds = (((seconds % 31536000) % 86400) % 3600) % 60;
+    //return numYears + " years " +  numDays + " days " + numHours + " hours " + numMinutes + " minutes " + numSeconds + " seconds";
+
+    var sTime = "";
+    var totalHours = numHours + (numDays * 24);
+    if (totalHours > 0) {
+      sTime += totalHours + " h ";
+    }
+
+    sTime += numMinutes + " min";
+
+    return sTime;
+  };
+
+  /**
+   * function to convert lastTransitionAmountInSeconds to a formatted time string
+   * @param seconds   This is lastTransitionAmountInSeconds
+   * @returns {string}   A formated string of the time.
+   */
+
+  this.formatTransitionAmountTime = function (seconds) {
+    function formatTimeValue(value) {
+      return Number(value.toString().slice(-1) == 1) ? ' ' : 's ';
+    }
+
+    var output = '';
+    if (seconds > 0 && seconds < 60) {
+      return output = '1 min';
+    }
+    var d = dayjs.duration(seconds, 'seconds');
+    var days = Math.floor(d.asDays());
+    var hours = Math.floor(d.asHours() - days * 24);
+    var mins = Math.floor(d.asMinutes()) - days * 24 * 60 - hours * 60;
+    if (days > 0) {
+      output += days + ' day' + formatTimeValue(days);
+    }
+    if (hours > 0) {
+      output += hours + ' hr' + formatTimeValue(hours);
+    }
+    if (mins >= 0) {
+      output += mins + ' min' + formatTimeValue(mins);
+    }
+    return output;
+  };
+
+  /*
+   * Format sensor data
+   * @param name  yAxis name
+   * @param data actual value
+   * @param formatNumberType
+   *
+   */
+  this.formatSensorValue = function (name, data, formatNumberType) {
+    if (data == null) {
+      return data;
+    }
+
+    var iDecPlaces = -1;
+    switch (name) {
+      case "Humidity":
+        iDecPlaces = 0;
+        break;
+      case "Temperature":
+        iDecPlaces = 1;
+        break;
+      case "Wind Run":
+        iDecPlaces = 2;
+        break;
+      case "Barometer":
+      case "Degree Days":
+        iDecPlaces = 3;
+        break;
+      case "Time":
+        return data / 3600;
+        break;
+    }
+
+    if (iDecPlaces >= 0) {
+      //Format the data to the proper decimal places
+      if (formatNumberType == 1) {
+        //period as decimal
+        return Utils.number(data, iDecPlaces, ".", ",");
+      } else {
+        //comma as decimal
+        return Utils.number(data, iDecPlaces, ",", ".");
+      }
+    } else {
+      //Data doesn't need to be formatted.
+      return data;
+    }
+  }
+
+  /*
+   * Format sensor data
+   * @param name  yAxis name
+   * @param data actual value
+   * @param formatNumberType
+   *
+   */
+  this.formatSensorReading = function (name, data, userAccountSetting) {
+    if (data == null || data === "--") {
+      return "--";
+    }
+
+    if (name == "Wind Direction" || name == "High Wind Direction") {
+      return this.getCardinalFromPositionForCharts(data);
+    }
+
+    if (name == "Time") {
+      return this.formatUptime(data);
+    }
+
+    if (name.indexOf("Pressure Switch State") >= 0 || name.indexOf(
+      "Flow Switch State") >= 0) {
+      return this.formatTransitionAmountTime(data);
+    }
+
+    if (name == "Pressure State" || name == "Flow State") {
+      if (data > 0 || data === "On") {
+        return '<span data-l10n-id="on" style="text-transform: capitalize">On</span>';
+      }
+      return '<span data-l10n-id="off" style="text-transform: capitalize">Off</span>';
+    }
+
+    if (name === "on_off_state") {
+      if (data > 0 || data === "On") {
+        return '<span data-l10n-id="active">Active</span>';
+      }
+      return '<span data-l10n-id="inactive">Inactive</span>';
+    }
+
+    if (name == "Flow Sum" || name == "Flow") {
+      return this.abbreviateNumber(data, userAccountSetting);
+    }
+
+    var iUnit = this.getSensorReadingUnit(name, userAccountSetting);
+    var iDecPlaces = this.getSensorReadingResolution(name, iUnit,
+      userAccountSetting.formatDecimalTypeId, userAccountSetting.airQualitySchemeId);
+    var decimalsSeparator, thousandsSeparator;
+    if (iDecPlaces >= 0 && _.isNumber(data)) {
+      //Format the data to the proper decimal places
+      if (userAccountSetting.formatNumberTypeId == 1) {
+        //period as decimal
+        decimalsSeparator = ".";
+        thousandsSeparator = ",";
+      } else {
+        //comma as decimal
+        decimalsSeparator = ",";
+        thousandsSeparator = ".";
+      }
+      if (name === "Barometer") {
+        thousandsSeparator = null;
+      }
+      return Utils.number(data, iDecPlaces, decimalsSeparator,
+        thousandsSeparator);
+    } else {
+      //Data doesn't need to be formatted.
+      return data;
+    }
+  };
+
+  /*
+   * Format sensor data
+   * @param name  yAxis name
+   * @param data actual value
+   * @param formatNumberType
+   * @param unit
+   */
+  this.formatSensorReadingWithUnit = function (name, data, userAccountSetting,
+    unit) {
+    var value = this.formatSensorReading(name, data, userAccountSetting);
+    if (data == null || data == undefined || unit == undefined || value ===
+      "--") {
+      return "--";
+    }
+    return value + " " + unit;
+  }
+
+  this.getSensorReadingUnit = function (name, userAccountSetting) {
+    var iUnit = 0;
+    switch (name) {
+      case "Rain":
+      case "Rain Rate":
+      case "Rainfall":
+      case "ET":
+        iUnit = userAccountSetting.unitsRainEtTypeId;
+        break;
+      case "Barometer":
+        iUnit = userAccountSetting.unitsBarTypeId;
+        break;
+      case "Pressure":
+        iUnit = userAccountSetting.unitsPressureTypeId;
+        break;
+      case "Flow":
+      case "Flow Rate":
+        iUnit = userAccountSetting.unitsFlowTypeId;
+        break;
+      case "Soil Moisture kPa":
+      case "Soil Moisture bar":
+      case "Soil Moisture cb":
+        iUnit = userAccountSetting.unitsSoilMoistureTypeId;
+        break;
+      case "Load":
+      case "Weight":
+        iUnit = userAccountSetting.unitsWeightTypeId;
+        break;
+      case "Depth":
+        iUnit = userAccountSetting.unitsWaterDepthTypeId;
+        break;
+    }
+    return iUnit;
+  };
+
+  this.getSensorReadingResolution = function (name, iUnit, formatDecimalType, airQualitySchemeId) {
+    var iDecPlaces = -1;
+
+    switch (name) {
+      case "Temperature":
+      case "Soil Temperature":
+        iDecPlaces = 1;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 0;
+        }
+        break;
+      case "Leaf Wetness":
+        iDecPlaces = 0;
+        break;
+      case "DLI":
+        iDecPlaces = 2;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 1;
+        }
+        break;
+      case "DLI_chartdata":
+        iDecPlaces = 3;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 2;
+        }
+        break;
+      case "Humidity":
+        iDecPlaces = 1;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 0;
+        }
+        break;
+      case "Wind Speed":
+        iDecPlaces = 1;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 0;
+        }
+        break;
+      case "Wind Run":
+        iDecPlaces = 2;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 1;
+        }
+        break;
+      case "Rain":
+      case "Rainfall":
+      case "Rain Rate":
+        iDecPlaces = 1;
+        if (iUnit == 1) {
+          iDecPlaces = 2;
+        }
+        break;
+      case "ET":
+        iDecPlaces = 2;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 1;
+        }
+        if (iUnit == 1) {
+          iDecPlaces = 3;
+          if (formatDecimalType == 1) {
+            iDecPlaces = 2;
+          }
+        }
+        break;
+      case "Barometer":
+        iDecPlaces = 3;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 2;
+        }
+        if (iUnit > 1) {
+          iDecPlaces = 1;
+        }
+        break;
+      case "UV Index":
+        iDecPlaces = 1;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 0;
+        }
+        break;
+      case "UV Dose":
+      case "EMC":
+        iDecPlaces = 2;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 1;
+        }
+        break;
+      case "Soil Salinity":
+      case "EC":
+      case "EC vic":
+      case "EC dsm":
+        iDecPlaces = 2;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 1;
+        }
+        break;
+      case "Soil Moisture":
+      case "Soil Moisture %":
+      case "Soil Moisture pct":
+      case "Soil Moisture cb":
+      case "Soil Moisture kPa":
+        iDecPlaces = 1;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 0;
+        }
+        break;
+      case "Soil Moisture bar":
+        iDecPlaces = 3;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 2;
+        }
+        break;
+      case "Pressure":
+        iDecPlaces = 3;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 2;
+        }
+        if (iUnit == 1) {
+          iDecPlaces = 2;
+          if (formatDecimalType == 1) {
+            iDecPlaces = 1;
+          }
+        }
+        break;
+      case "Depth":
+        if (iUnit > 2) {
+          iDecPlaces = 1;
+          if (formatDecimalType == 1) {
+            iDecPlaces = 0;
+          }
+        } else {
+          iDecPlaces = 2;
+          if (formatDecimalType == 1) {
+            iDecPlaces = 1;
+          }
+        }
+        break;
+      case "Solar Energy":
+        iDecPlaces = 2;
+        break;
+      case "Degree Days":
+      case "Voltage":
+      case "VOLTAGE":
+        iDecPlaces = 3;
+        break;
+      case "CO2":
+        iDecPlaces = 0;
+        break;
+      case "Load":
+      case "Weight":
+        iDecPlaces = 1;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 0;
+        }
+        break;
+      case "Particulate Matter":
+        iDecPlaces = 1;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 0;
+        }
+        break;
+      case "AQI":
+      case "Air Quality Index":
+        iDecPlaces = 1;
+        if (formatDecimalType == 1) {
+          iDecPlaces = 0;
+        }
+        //UK or Canada
+        if (airQualitySchemeId === 3 || airQualitySchemeId === 8) {
+          iDecPlaces = 2;
+          if (formatDecimalType == 1) {
+            iDecPlaces = 1;
+          }
+        }
+        break;
+    }
+    return iDecPlaces;
+  };
+
+  this.getXAxisMinValue = function (startTimestamp) {
+    return this.getXAxisValue(startTimestamp);
+  };
+
+  this.getXAxisMaxValue = function (endTimestamp) {
+    return this.getXAxisValue(endTimestamp);
+  };
+
+  this.getXAxisValue = function (timestamp) {
+    var a = new Date(timestamp);
+    var year = a.getFullYear();
+    var month = a.getMonth();
+    var date = a.getDate();
+    var hour = a.getHours();
+    var min = a.getMinutes();
+    var sec = a.getSeconds();
+    return Date.UTC(year, month, date, hour, min, sec);
+  };
+
+  this.formatSensorReadingForBrowse = function (data, options) {
+    var name = options.name;
+    var userAccountSetting = options.setting;
+    return this.formatSensorReading(name, data, userAccountSetting);
+  }
+
+  /*
+   * Apply sensor settings changes to the chart
+   */
+  this.updateHighchartsScales = function (yAxisArray, chart) {
+    var yAxis = chart.yAxis;
+    _.each(yAxis, function (axis, index) {
+      _.each(yAxisArray, function (a, i) {
+        if (axis.userOptions.index == i) {
+          axis.update({
+            opposite: a.opposite,
+            visible: a.visible
+          }, false);
+        }
+      });
+    });
+    chart.redraw();
+  };
+
+  this.getYaxisMinOffset = function (minVal, maxVal) {
+    return minVal > 0 ? minVal - (maxVal - minVal) * 0.05 : minVal + (maxVal +
+      minVal) * 0.05;
+  }
+
+  this.getYaxisMaxOffset = function (minVal, maxVal) {
+    return maxVal > 0 ? maxVal + (maxVal - minVal) * 0.05 : maxVal - (maxVal +
+      minVal) * 0.05;
+  }
+
+  this.getStartXAxisTimestamp2d = function (ts) {
+    return ts - 86401000; // 1 day and a second in the past
+  };
+
+  this.getEndXAxisTimestamp2d = function (ts) {
+    return ts + 255601000; // 3 days w/o a second in the future
+  };
+
+  this.getStartXAxisTimestamp3d = function (ts) {
+    return ts - 259201000; // 3 day and a second in the past
+  };
+
+  this.getEndXAxisTimestamp3d = function (ts) {
+    return ts + 345601000; // 3 days w/o a second in the future
+  };
+
+  /*
+   * Check to see if Iss is installed for
+   */
+  this.hasIss = function (data) {
+    var hasIss = false;
+    for (var i in data) {
+      var node = data[i];
+      for (var y in node.logicalSensor) {
+        var logicalSensor = node.logicalSensor[y];
+        if (logicalSensor.dataStructureTypeId == 2) {
+          hasIss = true;
+        }
+      }
+    }
+    return hasIss;
+  };
+
+  /**
+   * displays tooltip on mobilize page for 3 sec
+   * @param containerClass - class of a panel
+   */
+  this.showSensorDeletedTooltip = function (containerClass) {
+    setTimeout(function () {
+      $(containerClass + ' [data-toggle="tooltip"]').tooltip("show");
+    }, 500);
+    setTimeout(function () {
+      $(containerClass + ' [data-toggle="tooltip"]').tooltip("hide");
+    }, 3000);
+  };
+
+  /**
+   * used to get translations for tooltip and set it's title attr
+   * @param element - tooltip jquery element
+   * @param translations - array of translation keys
+   * @param tpl - compiled template
+   */
+  this.setTooltipTitleHtml = function (element, translations, tpl) {
+    var promises = [];
+    var bindingsObj = {};
+    _.each(translations, function (key) {
+      var prom = document.l10n.formatValue(key);
+      promises.push(prom);
+    });
+    Promise.all(promises).then(function (values) {
+      _.forEach(values, function (value, i) {
+        bindingsObj[translations[i]] = values[i];
+      });
+      var html = tpl(bindingsObj);
+      element.attr('title', html);
+      element.tooltip();
+    });
+  };
+
+  /**
+   * used to measure text width
+   * @param text - text string
+   * @param font - text font
+   * @return width in px
+   */
+  this.getTextWidth = function (text, font) {
+    var canvas = this.getTextWidth.canvas || (this.getTextWidth.canvas =
+      document.createElement("canvas"));
+    var context = canvas.getContext("2d");
+    context.font = font;
+    var metrics = context.measureText(text);
+    return metrics.width;
+  }
+
+  /**
+   * Format number as 2.5k if a thousand or more
+   * @param userAccountSetting - get decimal separator
+   */
+  this.abbreviateNumber = function (number, userAccountSetting) {
+    var replaceFrom = ",";
+    var replaceTo = ".";
+    if (userAccountSetting && userAccountSetting.formatNumberTypeId === 2) {
+      replaceFrom = ".";
+      replaceTo = ",";
+    }
+
+    var SI_PREFIXES = ["", "k", "M", "G", "T", "P", "E"];
+
+    // determines SI prefix)
+    var tier = Math.log10(number) / 3 | 0;
+
+    // if zero, we don't need a prefix
+    if (tier == 0) return Utils.number(number);
+
+    // get prefix and determine scale
+    var prefix = SI_PREFIXES[tier];
+    var scale = Math.pow(10, tier * 3);
+
+    // scale the number
+    var scaled = number / scale;
+
+    // format number and add prefix as suffix
+    return scaled.toFixed(1).replace(replaceFrom, replaceTo) + prefix;
+  }
+
+  /**
+   * Simple IE detection
+   */
+  this.isIE = function () {
+    return /MSIE|Trident/.test(window.navigator.userAgent);
+  }
+
+  /**
+   * Get tile header subname by station type abbrev
+   * @param sType
+   * @param sensorName - for EM node
+   * @param typeAbbrev - determine WLL or WLH
+   */
+  this.getSubnameByStationType = function (sType, sensorName) {
+    switch (sType) {
+      case "wll":
+        return "WeatherLink Live";
+      case "wlh":
+        return "WeatherLink Home";
+      case "gw":
+        return "Gateway";
+      case "vc":
+        return "Vantage Connect";
+      case "ip":
+      case "dl":
+        return "Console";
+      case "ws":
+        return "Weather Station";
+      case "es":
+        return "Extra Sensor";
+      case "nd":
+        return sensorName;
+    }
+  }
+
+  /**
+   * Check if station is WW device
+   * @param abbrev
+   */
+
+  this.isWWdevice = function (abbrev) {
+    return ['WLL', 'WW', 'WLH', 'HOME', 'SOLO', 'CON'].includes(abbrev);
+  }
+
+  /**
+   * Converts html tags into text
+   * @param input
+   */
+  this.htmlDecode = function (input) {
+    var doc = new DOMParser().parseFromString(input, "text/html");
+    return doc.documentElement.textContent;
+  }
+
+  /**
+   * Enum for sensorProductType
+   */
+  this.sensorProductTypes = {
+    1: 'Legacy',
+    2: 'EM',
+    3: 'EM Dynamic',
+    4: 'Health',
+    5: 'WLL',
+    6: 'AQS'
+  }
+
+  /**
+   * Get mapped AQS model data
+   * @param structure, sensorContainerData, env
+   */
+  this.getAqsMappedSensorData = function (structure, sensorContainerData, env) {
+    var mappedObj = {};
+    for (var key in structure) {
+      var value = _.get(_.find(sensorContainerData, function (container) {
+        var dataName = container.sensorDataName;
+        if (dataName.indexOf('Inside') === 0 && env === 'Indoors') {
+          dataName = dataName.substr(7);
+        }
+        return dataName === structure[key];
+      }), 'value');
+      mappedObj[key] = value;
+    }
+    return mappedObj;
+  };
+
+  /**
+   * Get all AQS sensor data containers in one array
+   * @param lsid
+   */
+  this.getCurrentHighLowAggregatedValues = function (lsid) {
+    var values = [];
+    var aqsSensorData = wl.data.aqsSensorData && wl.data.aqsSensorData[lsid];
+    if (aqsSensorData) {
+      values = values.concat(aqsSensorData.aggregatedValues).concat(
+        aqsSensorData.currConditionValues)
+        .concat(aqsSensorData.highLowValues);
+    }
+    return values;
+  };
+  /**
+   * Get AQS environment by lsid
+   * @param lsid
+   */
+  this.getAqsEnvironmentByLsid = function (lsid) {
+    var env = '';
+    var aqsSensorData = wl.data.aqsSensorData && wl.data.aqsSensorData[lsid];
+    if (aqsSensorData) {
+      env = wl.data.aqsSensorData[lsid].additionalData.AQ_ENVIRONMENT;
+    }
+    return env;
+  }
+
+  this.getWebsiteURL = function () {
+    var rootUrl = window.location.origin ? window.location
+      .origin +
+      '/' :
+      window.location.protocol + '/' + window.location.host +
+      '/';
+    return rootUrl;
+  }
+}
+
+//function Utils
+
+
+// Utility to parse the query string into a usable array
+// From: http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+// usage:    http://example.com?name=nick&age=old
+//           $.QueryString['name']  === "nick"
+//           $.QueryString['age']   === "old"
+//           $.QueryString['other'] === undefined
+(function ($) {
+  $.QueryString = (function (a) {
+    if (a == "") return {};
+    var b = {};
+    for (var i = 0; i < a.length; ++i) {
+      var p = a[i].split('=');
+      if (p.length != 2) continue;
+      b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
+    }
+    return b;
+  })(window.location.search.substr(1).split('&'))
+})(jQuery);

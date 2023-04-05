@@ -1,0 +1,118 @@
+var wl = wl || {};
+wl.data = wl.data || {};
+
+wl.app.module('oBulletinAds', function (oBulletinAds, oApp, Backbone, Marionette, $, _) {
+
+  this.startWithParent = false;
+
+  var contentsViews = wl.app.Dashboard.oContentsViews;
+  var oViews = wl.app.Dashboard.oViews;
+
+  var DEVICE_IDENTIFIER = wl.__bootstrap_device_identifier;
+
+  oBulletinAds.on("start", function (ads) {
+
+    var HideAdsView = Marionette.ItemView.extend({
+      template: window.tpl['hide-ads-modal'],
+      ui: {
+        close: '#close',
+        submit: '#submit'
+      },
+      events: {
+        'click @ui.close': 'hideModal',
+        'click @ui.submit': 'showComparePlans'
+      },
+      hideModal: function () {
+        wl.app.Modal.hideModal();
+      },
+      showComparePlans: function () {
+        $.post('/bulletin/ad/upgradeClicked/' + DEVICE_IDENTIFIER + '/' + this.options.id);
+        var ComparePlansView = wl.davis.views.ComparePlansView.extend({
+          template: wl.shared.tpl['selectTier']
+        });
+        var oModalBodyView = new ComparePlansView();
+        var oModalFooterView = new Marionette.ItemView({
+          template: false
+        });
+        wl.app.Modal.showStandardModal('', oModalBodyView,
+          oModalFooterView, 'select-tier-modal');
+      }
+    });
+
+    contentsViews.ads_tile = oViews.BaseTextView.extend({
+      ui: {
+        adsClose: '#adsClose',
+        adsLink: '.ads-link',
+        adsheader: '.ads-header',
+        image: 'img'
+      },
+      events: {
+        'click @ui.adsClose': 'onClickClose',
+        'click @ui.adsLink': 'onClickLink'
+      },
+      initialize: function (options) {
+        this.model = new Backbone.Model(options.configModel.get('data'));
+        this.model.set('isOwner', wl.data.isOwner);
+      },
+      onBeforeRender: function () {
+        this.template = window.tpl['portlet-ads'];
+        return this;
+      },
+      onRender: function () {
+        this.setImageHeight();
+      },
+      setImageHeight: function () {
+        this.ui.image.css('height', this.options.size.width - this.ui.adsheader.height()
+          - this.ui.adsLink.height() - 35)
+
+      },
+      onClickClose: function () {
+        $.post('/bulletin/ad/closeClicked/' + DEVICE_IDENTIFIER + '/' + this.model.get('adId'));
+        if (wl.__bootstrap_device_subscription_tier > 1) {
+          this.options.tileView.trigger('cmd:adshide');
+        } else {
+          this.showModal();
+        }
+      },
+      showModal: function () {
+        var oModalFooterView = new Marionette.ItemView({
+          template: false
+        });
+
+        var oModalBodyView = new HideAdsView({ id: this.model.get('adId') });
+        wl.app.Modal.showStandardModal('', oModalBodyView,
+          oModalFooterView, 'user-message-modal');
+      },
+      onClickLink: function () {
+        window.open(this.model.get('link', '_blank'));
+        $.post('/bulletin/ad/actionClicked/' + DEVICE_IDENTIFIER + '/' + this.model.get('adId'));
+      }
+    });
+
+    _.forEach(ads, function (ad) {
+      // add TYPE
+      wl.data.portletTypes.add({
+        sType: 'ads',
+        iGridWidth: 1,
+        iGridHeight: 1,
+        sDefaultView: 'main',
+        oAvailableViews: {
+          'main': 'ads_tile'
+        },
+        aSensors: [],
+        iAvailable: 1
+      });
+      // add CONFIG
+      wl.data.portletConfigs.add({
+        iPortletSettingId: null,
+        sType: 'ads',
+        sViewName: 'main',
+        iPosition: -1,
+        iGridWidth: 1,
+        iGridHeight: 1,
+        iVisible: 1,
+        data: ad
+      });
+    })
+  });
+});

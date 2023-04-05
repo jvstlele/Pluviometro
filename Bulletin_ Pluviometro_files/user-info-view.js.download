@@ -1,0 +1,53 @@
+var wl = wl || {};
+wl.davis = wl.davis || {};
+wl.davis.views = wl.davis.views || {};
+
+wl.davis.views.UserInfoView = Marionette.ItemView.extend({
+  className: "user-info-i",
+  template: wl.shared.tpl['user-info'],
+  ui: {
+    'upgradePlan': '.purchase-upgrades',
+    'contactSupport':'.contact-support'
+  },
+  events: {
+    'click @ui.upgradePlan': 'showTierCompare',
+    'click @ui.contactSupport': 'showContactSupport'
+  },
+  initialize: function(options) {
+    this.model = new Backbone.Model;
+    this.model.set('deviceUpgradesAllowedCount', 0);
+    this.model.set('userThumbImage', wl.__bootstrap_user_thumb_image);
+    this.model.set('firstName', options.firstName || wl.__bootstrap_user_first_name);
+    this.model.set('lastName', options.lastName || wl.__bootstrap_user_last_name);
+    this.model.set('userSubscriptionTypeId', wl.__bootstrap_user_subscriptionTypeId);
+    this.model.set('isInTrial', wl.__bootstrap_user_trialSubscription);
+    wl.app.vent.on('deviceUpgradesAllowedCount:set', function (data) {
+      this.model.set('deviceUpgradesAllowedCount', data);
+    }.bind(this));
+    this.model.bind('change:deviceUpgradesAllowedCount', this.render);
+  },
+  showTierCompare: function () {
+    var ComparePlansView = wl.davis.views.ComparePlansView.extend({
+      template: wl.shared.tpl['selectTier']
+    });
+    var oModalBodyView = new ComparePlansView();
+    var oModalFooterView = new Marionette.ItemView({
+        template: false
+    });
+    wl.app.Modal.showStandardModal('', oModalBodyView,
+        oModalFooterView, 'select-tier-modal');
+  },
+  showContactSupport: function () {
+   if (this.model.get('userSubscriptionTypeId') === 2) {
+     this.showTierCompare();
+   } else if (this.model.get('userSubscriptionTypeId') === 3) {
+     window.location.href = '/accountSubscription#makePayment/'+ wl.data.systemId +'/0/false/ProPlus';
+     // var oModalBodyView = new wl.app.oShareOptions.ContactSupportToUpgrade();
+     // var oModalFooterView = new Marionette.ItemView({
+     //   template: false
+     // });
+     // wl.app.Modal.showStandardModal('', oModalBodyView,
+     //   oModalFooterView, 'share-modal');
+   }
+  }
+});

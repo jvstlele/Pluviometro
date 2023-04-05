@@ -1,0 +1,1030 @@
+/**
+ * Created by anton.milko on 01-Apr-20.
+ */
+var contentsViews = wl.app.Dashboard.oContentsViews;
+var oViews = wl.app.Dashboard.oViews;
+var DASH_VALUE = "--";
+
+/*************************************
+ * AQS - Outside Temperature
+ *************************************/
+contentsViews.structure_type_65_temp_graph = contentsViews.temperature_graph.extend({
+  getSeries: function() {
+    var sensorContainerData = Utils.getCurrentHighLowAggregatedValues(
+      this.lsid);
+    var env = Utils.getAqsEnvironmentByLsid(this.lsid);
+    this.portletSensorData = Utils.getAqsMappedSensorData(
+      wl.constants.structureType65sensorDataName, sensorContainerData, env);
+
+    var iTempOutVal = null;
+    var iHeatIndexVal = null;
+    var iDewPointVal = null;
+    var iWetBulbVal = null;
+    if (!wl.app.oMapper.checkOutdatedData(this.lsid)) {
+      iTempOutVal = this.portletSensorData['temp'];
+      iHeatIndexVal = this.portletSensorData['heat_index'];
+      iDewPointVal = this.portletSensorData['dew_point'];
+      iWetBulbVal = this.portletSensorData['wet_bulb'];
+    } else if (wl.app.oMapper.checkOutdatedData(this.lsid)) {
+      this.oChartOptions.yAxis.min = 0;
+      this.oChartOptions.yAxis.max = 100;
+    }
+    var arrData = [
+      wl.app.Dashboard.createHighChartDataPoint('sensor_temp_out', this
+        .categoryLabels['sensor_temp_out'], iTempOutVal, '#c42728'),
+      wl.app.Dashboard.createHighChartDataPoint('sensor_temp_heat',
+        this.categoryLabels['sensor_temp_heat'], iHeatIndexVal,
+        '#e97f24'),
+      wl.app.Dashboard.createHighChartDataPoint('sensor_temp_dew', this
+        .categoryLabels['sensor_temp_dew'], iDewPointVal, '#38916d'),
+      wl.app.Dashboard.createHighChartDataPoint('sensor_wet_bulb', this
+        .categoryLabels['sensor_wet_bulb'], iWetBulbVal, '#55a8cc')
+    ];
+
+    if (_.every(arrData, {
+        y: 0
+      }) && this.oChart.yAxis) {
+      this.oChart.yAxis[0].setExtremes(0, 5);
+    }
+
+    var minVal = this.getMinVal(arrData);
+    var threshold = 0;
+    if (minVal < 0) {
+      this.oChartOptions.yAxis.min = Math.floor(minVal / 5) * 5;
+      threshold = this.oChart ? this.oChart.yAxis[0].min : wl.app.Dashboard
+        .getThresholdForNegativeVal(minVal);
+    }
+
+    return [{
+      id: 'temp',
+      name: 'temperature',
+      colorByPoint: true,
+      data: arrData,
+      threshold: threshold
+    }];
+  },
+  _getTooltip: function(oData) {
+    var oTplData = {
+      unit: this.model.get('unit'),
+      tooltip_text: 'tooltip_value_unit',
+      name: oData.key,
+      current_value: this.formatTemp(oData.y)
+    };
+
+    var sTempOutHiVal = DASH_VALUE;
+    var sTempOutLowVal = DASH_VALUE;
+    var sHeatIndexHiVal = DASH_VALUE;
+    var sDewPointHiVal = DASH_VALUE;
+    var sDewPointLowVal = DASH_VALUE;
+    var sWetBulbLowVal = DASH_VALUE;
+
+    if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+        'temp_high'])) {
+      sTempOutHiVal = this.portletSensorData['temp_high'];
+    }
+    if (!wl.app.Dashboard.isDashed32767(this.portletSensorData['temp_low'])) {
+      sTempOutLowVal = this.portletSensorData['temp_low'];
+    }
+    if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+        'heat_index_high'])) {
+      sHeatIndexHiVal = this.portletSensorData['heat_index_high'];
+    }
+    if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+        'dew_point_high'])) {
+      sDewPointHiVal = this.portletSensorData['dew_point_high'];
+    }
+    if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+        'dew_point_low'])) {
+      sDewPointLowVal = this.portletSensorData['dew_point_low'];
+    }
+    if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+        'wet_bulb_low'])) {
+      sWetBulbLowVal = this.portletSensorData['wet_bulb_low'];
+    }
+
+    switch (oData.point.id) {
+      case 'sensor_temp_out':
+        oTplData.hi_value = this.formatTemp(sTempOutHiVal);
+        oTplData.low_value = this.formatTemp(sTempOutLowVal);
+        break;
+      case 'sensor_temp_heat':
+        oTplData.hi_value = this.formatTemp(sHeatIndexHiVal);
+        break;
+      case 'sensor_temp_dew':
+        oTplData.hi_value = this.formatTemp(sDewPointHiVal);
+        oTplData.low_value = this.formatTemp(sDewPointLowVal);
+        break;
+      case 'sensor_wet_bulb':
+        oTplData.low_value = this.formatTemp(sWetBulbLowVal);
+        break;
+    }
+    return window.tpl['tooltip-hilow-single'](oTplData);
+  }
+});
+
+/*************************************
+ * AQS - Current AQI
+ *************************************/
+contentsViews.structure_type_65_aqi_graph = contentsViews.structure_type_64_graph
+  .extend({
+    className: 'graph-view',
+    maxDialVal: 100, //The max val for the dial. This is set in the getSeries function
+    getDataName: function() {
+      return 'aqi'
+    },
+    afterInit: function() {
+      var that = this;
+      this.model.set('unit', '&nbsp;');
+      this.oChartOptions = this.getSolidGaugeChartOptions();
+      if (this.getDataName() === 'aqi') {
+        this.oChartOptions.tooltip.enabled = true;
+        this.oChartOptions.tooltip.useHTML = true;
+        this.oChartOptions.tooltip.formatter = function() {
+          return that._getTooltip(this);
+        };
+      }
+      this.size = Marionette.getOption(this, 'size');
+    },
+    buildGraph: function() {
+      this.oChartOptions.chart.renderTo = this.$(
+        '.highcharts-container')[0];
+      this.oChartOptions.series = this.getSeries();
+      this.oChart = new Highcharts.Chart(this.oChartOptions);
+      this.oChart.setSize(this.size.width - 4, this.size.height - 4);
+      this.oChart.yAxis[0].setExtremes(0, this.maxDialVal,
+        true, false);
+      return this;
+    },
+    getSeries: function() {
+      var sData = DASH_VALUE;
+      var dRawData = 0;
+      var labelOffset = 30;
+
+      var sensorContainerData = Utils.getCurrentHighLowAggregatedValues(
+        this.lsid);
+      var env = Utils.getAqsEnvironmentByLsid(this.lsid);
+      this.portletSensorData = Utils.getAqsMappedSensorData(
+        wl.constants.structureType65sensorDataName, sensorContainerData, env);
+
+      if (this.portletSensorData[this.getDataName()] && !wl.app.oMapper.checkOutdatedData(
+          this.lsid)) {
+        dRawData = this.portletSensorData[this.getDataName()].calculatedRisk;
+        this.maxDialVal = Utils.slidingScaleMax(dRawData);
+        sData = Utils.formatSensorReading('AQI', dRawData, wl.data.userAccountSetting);
+        this.color = this.portletSensorData[this.getDataName()].aqiRisk.scolorDefintion;
+        this.model.set('unit', this.portletSensorData[this.getDataName()].aqiRisk
+          .sseverityDescription);
+        this.oChartOptions.yAxis.stops = [
+          [0.1, this.color]
+        ]
+      }
+
+      var seriesLabel = this.model.get('unit');
+      if (seriesLabel.indexOf(' ') !== -1) {
+        labelOffset = 47;
+      }
+
+      if (dRawData == null) {
+      	dRawData = 0;
+      	seriesLabel = '';
+      	labelOffset = -20;
+      }
+
+      return [{
+        id: 'aqi',
+        data: [dRawData],
+        color: this.color,
+        dataLabels: {
+          style: {
+            fontWeight: 'normal',
+          },
+          y: labelOffset,
+          format: '<div style="text-align:center;"><span style="font-family:merriweatherregular;font-size:24px;color:#3b454b">' +
+            sData + '</span><br/>' +
+            '<span style="font-family:merriweatherregular;font-size:14px;color:#3b454b">' +
+            seriesLabel.replace(" ", '<br>') + '</span></div>'
+        }
+      }];
+    },
+    updateData: function() {
+      this.oChart.series[0].update(this.getSeries()[0]);
+      this.oChart.yAxis[0].update({
+        stops: [
+          [0.1, this.color]
+        ]
+      });
+    },
+    _getTooltip: function() {
+      var oTplData = {
+        name: '',
+        tooltip_text: 'tooltip_value_unit',
+        unit: '',
+      };
+
+      var sAqi = DASH_VALUE;
+      var sAqiHi = DASH_VALUE;
+      if (this.portletSensorData[this.getDataName()] && this.portletSensorData[
+          this.getDataName()].calculatedRisk != null && !wl.app.oMapper.checkOutdatedData(
+          this.lsid)) {
+        sAqi = Utils.formatSensorReading('AQI', this.portletSensorData[this
+          .getDataName()].calculatedRisk, wl.data.userAccountSetting);
+      }
+      if (this.portletSensorData['aqi_high'] && this.portletSensorData[
+          'aqi_high'].calculatedRisk != null && !wl.app.oMapper.checkOutdatedData(
+          this.lsid)) {
+        sAqiHi = Utils.formatSensorReading('AQI', this.portletSensorData[
+          'aqi_high'].calculatedRisk, wl.data.userAccountSetting);
+      }
+
+      oTplData.current_value = sAqi;
+      oTplData.hi_value = sAqiHi;
+
+      return window.tpl['tooltip-hilow-single'](oTplData);
+    }
+  });
+
+/*************************************
+ * AQS - 1 Hour AQI
+ *************************************/
+contentsViews.structure_type_65_1hr_aqi_graph = contentsViews.structure_type_65_aqi_graph
+  .extend({
+    getDataName: function() {
+      return 'aqi_one_hour'
+    }
+  });
+
+/*************************************
+ * AQS - 3 Hour AQI
+ *************************************/
+contentsViews.structure_type_65_3hr_aqi_graph = contentsViews.structure_type_65_aqi_graph
+  .extend({
+    getDataName: function() {
+      return 'aqi_3_hour'
+    }
+  });
+
+/*************************************
+ * AQS - NowCast AQI
+ *************************************/
+contentsViews.structure_type_65_nowcast_graph = contentsViews.structure_type_65_aqi_graph
+  .extend({
+    getDataName: function() {
+      return 'now_cast'
+    }
+  });
+
+/*************************************
+ * AQS - Air Quality
+ *************************************/
+contentsViews.structure_type_65_aqi_group_graph = contentsViews.rain_total_graph
+  .extend({
+    className: 'graph-view',
+    getCategoriesKeys: function() {
+      return [
+        'current_aqi',
+        'one_hour_aqi',
+        'three_hour_aqi',
+        'nowcast',
+        'current_aqi_tooltip',
+        'one_hour_aqi_tooltip',
+        'three_hour_aqi_tooltip',
+        'nowcast_tooltip'
+      ]
+    },
+    getValueName: function() {
+      return 'AQI';
+    },
+    afterInit: function() {
+      var that = this;
+      this.categoryLabels = [];
+      var categoriesKeys = this.getCategoriesKeys();
+      _.each(categoriesKeys, function(key) {
+        var prom = document.l10n.formatValue(key);
+        that.promises.push(prom);
+        prom.then(function(result) {
+          that.categoryLabels[key] = result;
+        });
+      });
+      this.oChartOptions.tooltip.enabled = true;
+      this.oChartOptions.tooltip.useHTML = true;
+      this.oChartOptions.tooltip.formatter = function() {
+        return that._getTooltip(this);
+      };
+      this.model.set('unit', '');
+      this.oChartOptions.yAxis = {
+        labels: {
+          formatter: function() {
+            return Utils.formatSensorReading(that.getValueName(), this.value,
+              wl.data.userAccountSetting) + " " + that.model.get(
+              'unit');
+          }
+        },
+        title: null
+      };
+      this.oChartOptions.xAxis.labels = {
+        autoRotation: [-25, -35],
+        y: 15,
+        x: 5,
+        style: {
+          textOverflow: 'none'
+        },
+        formatter: function() {
+          var key;
+          switch (this.pos) {
+            case 0:
+              key = 'current_aqi_tooltip';
+              break;
+            case 1:
+              key = 'one_hour_aqi_tooltip';
+              break;
+            case 2:
+              if (that.model.get('aqiId') === wl.constants.canadaAqiId) {
+                key = 'three_hour_aqi_tooltip';
+              } else {
+                key = 'nowcast_tooltip';
+              }
+          };
+          var html =
+            '<i style="vertical-align:middle;position: relative; top: -2px;" class="wl-icon icon-faq" data-toggle="tooltip" data-container="#portal-container" data-html="true" data-placement="bottom" title=""';
+          html +=
+            'data-original-title="<div style=\'max-width: 350px;\'>' +
+            that.categoryLabels[key] + '</div>"></i>';
+          return this.value + html;
+        },
+        useHTML: true
+      }
+      this.oChartOptions.plotOptions.series.dataLabels.formatter =
+        function() {
+          return Utils.formatSensorReading(that.getValueName(), this.y, wl.data
+            .userAccountSetting);
+        }
+      this.oChartOptions.chart.marginTop = 24;
+    },
+    buildGraph: function() {
+      this.oChartOptions.chart.renderTo = this.$(
+        '.highcharts-container')[0];
+      this.oChartOptions.series = this.getSeries();
+      this.oChart = new Highcharts.Chart(this.oChartOptions);
+      this.oChart.setSize(this.size.width - 4, this.size.height - 4);
+      return this;
+    },
+    getSeries: function() {
+      var dCurrent = null;
+      var dOneHour = null;
+      var dThreeHour = null
+      var dNowCast = null;
+
+      var sCurrentColor, sOneHourColor, sNowCastColor, sThreeHourColor;
+
+      this.model.set('aqiId', wl.data.userAccountSetting.airQualitySchemeId);
+      var sensorContainerData = Utils.getCurrentHighLowAggregatedValues(
+        this.lsid);
+      var env = Utils.getAqsEnvironmentByLsid(this.lsid);
+      this.portletSensorData = Utils.getAqsMappedSensorData(
+        wl.constants.structureType65sensorDataName, sensorContainerData, env);
+
+      if (!wl.app.oMapper.checkOutdatedData(this.lsid)) {
+        if (this.portletSensorData['aqi'] != null) {
+          dCurrent = this.portletSensorData['aqi'].calculatedRisk;
+          sCurrentColor = this.portletSensorData['aqi'].aqiRisk.scolorDefintion;
+        }
+        if (this.portletSensorData['aqi_one_hour'] != null) {
+          dOneHour = this.portletSensorData['aqi_one_hour'].calculatedRisk;
+          sOneHourColor = this.portletSensorData['aqi_one_hour'].aqiRisk.scolorDefintion;
+        }
+        if (this.portletSensorData['now_cast'] != null) {
+          dNowCast = this.portletSensorData['now_cast'].calculatedRisk;
+          sNowCastColor = this.portletSensorData['now_cast'].aqiRisk.scolorDefintion;
+        }
+        if (this.portletSensorData['aqi_3_hour'] != null) {
+          dThreeHour = this.portletSensorData['aqi_3_hour'].calculatedRisk;
+          sThreeHourColor = this.portletSensorData['aqi_3_hour'].aqiRisk.scolorDefintion;
+        }
+      }
+
+      //If all values are 0, then we need to set yaxis max so that the yaxis is shown.
+      if ((dNowCast === 0 || dThreeHour === 0) && dOneHour === 0 &&
+        dCurrent === 0) {
+        this.oChartOptions.yAxis.min = 0;
+        this.oChartOptions.yAxis.max = 1;
+      }
+      var arrData = [
+        wl.app.Dashboard.createHighChartDataPoint('current_aqi', this.categoryLabels[
+          'current_aqi'], dCurrent, sCurrentColor),
+        wl.app.Dashboard.createHighChartDataPoint('one_hour_aqi', this.categoryLabels[
+          'one_hour_aqi'], dOneHour, sOneHourColor)
+      ]
+
+      if (this.model.get('aqiId') === wl.constants.canadaAqiId) {
+        arrData.push(wl.app.Dashboard.createHighChartDataPoint('aqi_3_hour',
+          this.categoryLabels[
+            'three_hour_aqi'], dThreeHour, sThreeHourColor));
+      } else {
+        arrData.push(wl.app.Dashboard.createHighChartDataPoint('nowcast',
+          this.categoryLabels[
+            'nowcast'], dNowCast, sNowCastColor))
+      }
+
+      return [{
+        id: 'aqi',
+        name: 'aqi',
+        colorNowCast: sNowCastColor,
+        colorOneHour: sOneHourColor,
+        colorCurrent: sCurrentColor,
+        colorThreeHour: sThreeHourColor,
+        data: arrData
+      }];
+    },
+    updateData: function() {
+      this.oChart.series[0].update(this.getSeries()[0]);
+    },
+    _getTooltip: function(oData) {
+      if (oData.point.id !== 'current_aqi') {
+        return false;
+      }
+      var oTplData = {
+        unit: this.model.get('unit'),
+        tooltip_text: 'tooltip_value_unit',
+        name: oData.key,
+        current_value: Utils.formatSensorReading(this.getValueName(),
+          oData.y, wl.data.userAccountSetting)
+      };
+
+      var sAQIHighVal = DASH_VALUE;
+      if (!wl.app.Dashboard.isDashed32767(this.portletSensorData['aqi_high']) &&
+        this.portletSensorData['aqi_high'].calculatedRisk != null) {
+        sAQIHighVal = this.portletSensorData['aqi_high'].calculatedRisk;
+      }
+
+      switch (oData.point.id) {
+        case 'current_aqi':
+          oTplData.hi_value = Utils.formatSensorReading(this.getValueName(),
+            sAQIHighVal, wl.data.userAccountSetting);
+          break;
+      }
+      return window.tpl['tooltip-hilow-single'](oTplData);
+    }
+  });
+
+/*************************************
+ * AQS - Particular Matter
+ *************************************/
+contentsViews.structure_type_65_pm_graph = contentsViews.structure_type_65_aqi_group_graph
+  .extend({
+    getValueName: function() {
+      return 'Particulate Matter';
+    },
+    getSeries: function() {
+      var self = this;
+      var colors = ['#9BBBA7', '#B2B6BA', '#E2E4E5']
+      var dPM1 = null;
+      var dPM25 = null;
+      var dPM10 = null;
+
+      this.model.set('unit', Utils.getAccountUnitsByDataName(wl.data.userAccountSetting,
+        this.getValueName()));
+      this.oChartOptions.xAxis.labels.formatter = function() {
+        return this.value;
+      }
+      this.oChartOptions.yAxis.labels.formatter = function() {
+        return Utils.formatSensorReading(self.getValueName(), this.value,
+          wl.data.userAccountSetting) + " " + self.model.get('unit');
+      };
+      this.oChartOptions.plotOptions.series.states = {
+        hover: {
+          brightness: -0.1
+        }
+      }
+
+      var sensorContainerData = Utils.getCurrentHighLowAggregatedValues(
+        this.lsid);
+      var env = Utils.getAqsEnvironmentByLsid(this.lsid);
+      this.portletSensorData = Utils.getAqsMappedSensorData(
+        wl.constants.structureType65sensorDataName, sensorContainerData,
+        env);
+
+      if (!wl.app.oMapper.checkOutdatedData(this.lsid)) {
+        dPM1 = this.portletSensorData['pm_1'];
+        dPM25 = this.portletSensorData['pm_25'];
+        dPM10 = this.portletSensorData['pm_10'];
+      }
+
+      //If all values are 0, then we need to set yaxis max so that the yaxis is shown.
+      if (dPM1 === 0 && dPM25 === 0 && dPM10 === 0) {
+        this.oChartOptions.yAxis.min = 0;
+        this.oChartOptions.yAxis.max = 1;
+      }
+      var arrData = [
+        wl.app.Dashboard.createHighChartDataPoint('pm_1', 'PM 1', dPM1,
+          colors[0]),
+        wl.app.Dashboard.createHighChartDataPoint('pm_25', 'PM 2.5',
+          dPM25, colors[1]),
+        wl.app.Dashboard.createHighChartDataPoint('pm_10', 'PM 10', dPM10,
+          colors[2])
+      ]
+
+      return [{
+        id: 'pm',
+        name: 'pm',
+        colorPM1: colors[0],
+        colorPM25: colors[1],
+        colorPM10: colors[2],
+        data: arrData
+      }];
+    },
+    _getTooltip: function(oData) {
+      var oTplData = {
+        unit: this.model.get('unit'),
+        tooltip_text: 'tooltip_value_unit',
+        name: oData.key,
+        current_value: Utils.formatSensorReading(this.getValueName(),
+          oData.y, wl.data.userAccountSetting)
+      };
+
+      var sPM1HighVal = DASH_VALUE;
+      var sPM25HighVal = DASH_VALUE;
+      var sPM10HighVal = DASH_VALUE;
+
+      if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+          'pm_1_high'])) {
+        sPM1HighVal = this.portletSensorData['pm_1_high'];
+      }
+      if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+          'pm_25_high'])) {
+        sPM25HighVal = this.portletSensorData['pm_25_high'];
+      }
+      if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+          'pm_10_high'])) {
+        sPM10HighVal = this.portletSensorData['pm_10_high'];
+      }
+
+      switch (oData.point.id) {
+        case 'pm_1':
+          oTplData.hi_value = Utils.formatSensorReading(this.getValueName(),
+            sPM1HighVal, wl.data.userAccountSetting);
+          break;
+        case 'pm_25':
+          oTplData.hi_value = Utils.formatSensorReading(this.getValueName(),
+            sPM25HighVal, wl.data.userAccountSetting);
+          break;
+        case 'pm_10':
+          oTplData.hi_value = Utils.formatSensorReading(this.getValueName(),
+            sPM10HighVal, wl.data.userAccountSetting);
+          break;
+      }
+      return window.tpl['tooltip-hilow-single'](oTplData);
+    }
+  });
+
+/**********************************************
+ * AQS - Last 6 Hour data
+ **********************************************/
+contentsViews.structure_type_65_aqi_trend_graph = oViews.BaseGraphView.extend({
+  className: 'portlet-aqs-trend graph-view',
+  getSeriesName: function() {
+    return 'timeSeriesValues';
+  },
+  onBeforeRender: function() {
+    this.iAqsHat = 0;
+    this.tzOffsetSec = wl.data.timezoneOffset * 60;
+    if (wl.data.aqsSensorData && wl.data.aqsSensorData[this.lsid] &&
+      wl.data.aqsSensorData[this.lsid].timeSeriesValues) {
+      var containerName = 'AQI';
+      if (wl.data.aqsSensorData[this.lsid].additionalData.AQ_ENVIRONMENT ===
+        'Indoors') {
+        containerName = 'Inside AQI';
+      }
+      this.aqsTrendData = wl.data.aqsSensorData[this.lsid][this.getSeriesName()][
+        containerName];
+      this.iAqsHat = wl.data.aqsSensorData[this.lsid].additionalData[
+          'lastUpdated'] ||
+        dayjs().unix(); //temp
+      this.aqsDataLastUpdated = this.iAqsHat + this.tzOffsetSec;
+
+      if (wl.app.oMapper.checkLastUpdatedTime(this.aqsDataLastUpdated,
+          wl.data.outdatedDataBufferSec )) {
+        //Display dashed value for stale data
+        this.template = this.getCurrentAqsTemplate();
+      } else {
+        this.template = wl.app.Dashboard.getNoDataTemplate();
+      }
+    } else {
+      this.template = wl.app.Dashboard.getNoDataTemplate();
+    }
+  },
+  afterInit: function() {
+    var that = this;
+    this.model = new Backbone.Model();
+    this.model.set('unit', '');
+
+    this.oChartOptions = wl.app.Dashboard.highchartsOptions({
+      chart: {
+        type: 'line',
+        marginTop: 32,
+        marginBottom: 40
+      },
+      legend: {
+        enabled: false
+      },
+      title: null,
+      pane: {
+        center: ['50%', '85%'],
+        size: '120%',
+        startAngle: -90,
+        endAngle: 90,
+        background: {
+          backgroundColor: '#eee', // bg color of the arc
+          innerRadius: '60%',
+          outerRadius: '100%',
+          shape: 'arc'
+        }
+      },
+      tooltip: {
+        enabled: true,
+        backgroundColor: '#3c464c',
+        style: {
+          color: '#fff',
+          fontFamily: 'Open Sans'
+        },
+        formatter: function() {
+          var sOutput = Utils.formatSensorReading('AQI',
+              this.y, wl.data.userAccountSetting) + "<br>" +
+            dayjs.utc(this.x).format(wl.data.timeFormat);
+          return sOutput;
+        }
+      },
+      yAxis: {
+        labels: {
+          formatter: function() {
+            return Utils.formatSensorReading('AQI',
+              this.value, wl.data.userAccountSetting)
+          }
+        },
+        tickInterval: 1,
+        title: null,
+        tickPositioner: function() {
+          var formattedArr = _.map(this.tickPositions,
+            function(tick) {
+              return Utils.formatSensorReading('AQI',
+                tick, wl.data.userAccountSetting)
+            });
+          var uniqArr = _.uniq(formattedArr);
+          return formattedArr.length === uniqArr.length ?
+            this.tickPositions : uniqArr;
+        }
+      },
+      xAxis: this.getXAxis(),
+      credits: {
+        enabled: false
+      },
+      plotOptions: {
+        series: {
+          states: {
+            hover: {
+              enabled: false
+            }
+          }
+        },
+        line: {
+          marker: {
+            enabled: false
+          }
+        }
+      }
+    });
+  },
+  getXAxis: function () {
+    return {
+      type: 'datetime',
+      tickInterval: 3600 * 1000,
+      dateTimeLabelFormats: {
+        hour: wl.data.timeFormat === "HH:mm" ? "%H:%M" : "%l %p"
+      }
+    }
+  },
+  buildGraph: function() {
+    if (this.aqsTrendData && !wl.app.oMapper.checkLastUpdatedTime(
+        this.aqsDataLastUpdated, wl.data.outdatedDataBufferSec)) {
+      if (!this.color) {
+        this.color = '#10506E';
+      }
+      this.oChartOptions.chart.renderTo = this.$(
+        '.highcharts-container')[0] || this.$('.out').parent()[0];
+      this.oChartOptions.series = this.getSeries();
+      this.oChart = new Highcharts.Chart(this.oChartOptions);
+      this.oChart.setSize(this.size.width - 4, this.size.height - 4);
+      return this;
+    }
+  },
+  getSeries: function() {
+    if (this.aqsTrendData) {
+      var iLoopCounter = 1;
+      var aMappedData = _.map(this.aqsTrendData,
+        function(value, hat) {
+          var iLocalHat = Number(hat) * 1000 + wl.data.timezoneOffset *
+            60 *
+            1000;
+          return {
+            y: value,
+            x: iLocalHat,
+            id: 'sensor_aqs',
+            dataLabels: {
+              enabled: false, // bEnabled,
+              format: '{y}'
+            }
+          };
+        });
+
+      //If all values are 0, then we need to set yaxis max so that the yaxis is shown.
+      if (!_.some(this.aqsTrendData)) {
+        this.oChartOptions.yAxis.min = 0;
+        this.oChartOptions.yAxis.max = 1;
+      }
+
+      return [{
+        id: 'aqs',
+        name: 'AQS',
+        color: this.color,
+        data: aMappedData
+      }];
+    }
+  },
+  updateData: function() {
+    var containerName = 'AQI';
+    if (wl.data.aqsSensorData[this.lsid].additionalData.AQ_ENVIRONMENT ===
+      'Indoors') {
+      containerName = 'Inside AQI';
+    }
+    this.aqsTrendData = wl.data.aqsSensorData[this.lsid] && wl.data.aqsSensorData[this.lsid][this.getSeriesName()][containerName];
+    if (this.aqsTrendData) {
+      if (!this.oChart && !wl.app.oMapper.checkLastUpdatedTime(this.aqsDataLastUpdated,
+          wl.data.outdatedDataBufferSec)) {
+        this.buildGraph();
+      }
+      if (!this.oChart) {
+        return;
+      }
+      this.oChart.series[0].update(this.getSeries()[0]);
+    } else {
+      this.render();
+    }
+  },
+  getCurrentAqsTemplate: function() {
+    var oTplData = {
+      aqsCurrent: DASH_VALUE, //dash stale data
+      aqsUnit: this.model.get('unit')
+    };
+    return window.tpl['portlet-aqs-trend'](oTplData);
+  }
+});
+
+/**********************************************
+ * AQS - Inside Temp/Hum
+ **********************************************/
+contentsViews.structure_type_65_temp_hum_graph = contentsViews.structure_type_16_graph
+  .extend({
+    className: 'graph-view',
+    portletSensorData: [],
+    buildGraph: function() {
+      this.oChartOptions.chart.renderTo = this.$(
+        '.highcharts-container')[0];
+      this.oChartOptions.series = this.getSeries();
+      this.oChartOptions.xAxis = this.getXAxis();
+      this.oChartOptions.yAxis = this.getYAxis();
+      this.oChartOptions.tooltip.outside = true,
+        this.oChart = new Highcharts.Chart(this.oChartOptions);
+
+      var w, h;
+
+      w = this.size.width - 10;
+      h = this.size.height - 10;
+      this.oChart.setSize(w, h, true);
+    },
+    getSeries: function() {
+      var sensorContainerData = Utils.getCurrentHighLowAggregatedValues(
+        this.lsid);
+      var env = Utils.getAqsEnvironmentByLsid(this.lsid);
+      this.portletSensorData = Utils.getAqsMappedSensorData(
+        wl.constants.structureType65sensorDataName, sensorContainerData,
+        env);
+
+      var dTemp = null;
+      var dTempHeat = null;
+      var dHum = null;
+
+      if (!wl.app.oMapper.checkOutdatedData(this.lsid)) {
+        if (!wl.app.Dashboard.isDashed32767(this.portletSensorData['temp'])) {
+          dTemp = this.portletSensorData['temp'];
+        }
+        if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+            'heat_index'])) {
+          dTempHeat = this.portletSensorData['heat_index'];
+        }
+        if (!wl.app.Dashboard.isDashed32767(this.portletSensorData['hum'])) {
+          dHum = this.portletSensorData['hum'];
+        }
+      }
+
+      var arrData = [dTemp, dTempHeat, dHum];
+
+      if (_.every(arrData, function(el) {
+          return el === 0
+        }) && this.oChart.yAxis) {
+        this.oChart.yAxis[0].setExtremes(0, 5);
+      }
+
+      var minVal = Math.min.apply(null, arrData);
+      var threshold = 0;
+      if (minVal < 0) {
+        this.oChartOptions.yAxis[0].min = Math.floor(minVal / 5) * 5;
+        threshold = wl.app.dashboard.getThresholdForNegativeVal(minVal);
+      }
+
+      var blankPoint = {
+        y: 0,
+        id: '',
+        color: 'transparent'
+      }
+
+      return [{
+        id: 'temp',
+        yAxis: 0,
+        data: [wl.app.Dashboard.createHighChartDataPoint(this.lsid +
+          '_temp', " ",
+          dTemp, "#c42728"), blankPoint, blankPoint],
+        threshold: threshold
+      }, {
+        id: 'heat_index',
+        yAxis: 0,
+        data: [blankPoint, wl.app.Dashboard.createHighChartDataPoint(
+          this.lsid + '_heat_index', " ",
+          dTempHeat, "#e97f24"), blankPoint],
+        threshold: threshold
+      }, {
+        id: 'hum',
+        yAxis: 1,
+        data: [blankPoint, blankPoint, wl.app.Dashboard.createHighChartDataPoint(
+          this.lsid + '_hum', " ",
+          dHum, "#38916C")]
+      }]
+    },
+    getXAxis: function() {
+      return [{
+        categories: [this.translations['temp'], this.translations[
+            'sensor_temp_heat'],
+          this.translations['hum']
+        ],
+        labels: {
+          autoRotation: [-25, -35],
+          y: 15,
+          style: {
+            textOverflow: 'none'
+          }
+        }
+      }];
+    },
+    updateData: function() {
+      this.oChart.series[0].update(this.getSeries()[0]);
+      this.oChart.series[1].update(this.getSeries()[1]);
+      this.oChart.series[2].update(this.getSeries()[2]);
+    },
+    _getTooltip: function(oHcData) {
+      var oTplData = {
+        tooltip_text: 'tooltip_value_unit'
+      };
+
+      switch (oHcData.point.id) {
+        case this.lsid + '_temp':
+          oTplData.unit = wl.data.unitLabelTemperature;
+          oTplData.name = 'sensor_temp';
+          oTplData.current_value = Utils.formatSensorReading(
+            'Temperature', this.portletSensorData['temp'],
+            wl.data.userAccountSetting);
+          oTplData.hi_value = Utils.formatSensorReading('Temperature',
+            this.portletSensorData['temp_high'], wl.data
+            .userAccountSetting);
+          oTplData.low_value = Utils.formatSensorReading(
+            'Temperature', this.portletSensorData['temp_low'],
+            wl.data.userAccountSetting);
+          break;
+        case this.lsid + '_hum':
+          oTplData.unit = wl.data.unitLabelPercent;
+          oTplData.name = 'sensor_hum';
+          oTplData.current_value = Utils.formatSensorReading(
+            'Humidity', this.portletSensorData['hum'],
+            wl.data.userAccountSetting);
+          oTplData.hi_value = Utils.formatSensorReading('Humidity',
+            this.portletSensorData['hum_high'], wl.data
+            .userAccountSetting);
+          oTplData.low_value = Utils.formatSensorReading('Humidity',
+            this.portletSensorData['hum_low'], wl.data
+            .userAccountSetting);
+          break;
+        case this.lsid + '_heat_index':
+          oTplData.unit = wl.data.unitLabelTemperature;
+          oTplData.name = 'sensor_temp_heat';
+          oTplData.current_value = Utils.formatSensorReading(
+            'Temperature', this.portletSensorData['heat_index'],
+            wl.data.userAccountSetting);
+          oTplData.hi_value = Utils.formatSensorReading('Temperature',
+            this.portletSensorData['heat_index_high'], wl.data
+            .userAccountSetting);
+          break;
+        default:
+          return false;
+      }
+      return window.tpl['tooltip-hilow-single'](oTplData);
+    }
+  });
+
+/************************
+ * AQS - Humidity
+ ************************/
+contentsViews.structure_type_65_hum_graph = contentsViews.humidity_graph.extend({
+  getSeries: function() {
+    var sData = DASH_VALUE;
+    var sensorContainerData = Utils.getCurrentHighLowAggregatedValues(
+      this.lsid);
+    var env = Utils.getAqsEnvironmentByLsid(this.lsid);
+    this.portletSensorData = Utils.getAqsMappedSensorData(
+      wl.constants.structureType65sensorDataName, sensorContainerData,
+      env);
+    if (!wl.app.oMapper.checkOutdatedData(this.lsid)) {
+      sData = this.portletSensorData['hum'];
+      this.maxDialVal = Utils.slidingScaleMax(sData);
+    }
+    return [{
+      id: 'humidity',
+      name: 'hum',
+      data: [sData],
+      color: this.color,
+      dataLabels: {
+        style: {
+          fontWeight: 'normal'
+        },
+        y: 32,
+        format: '<div style="text-align:center;"><span style="font-family:merriweatherregular;font-size:24px;color:#3b454b">' +
+          Utils.formatSensorReading("Humidity", sData, wl.data.userAccountSetting) +
+          '</span><br/>' +
+          '<span style="font-family:merriweatherregular;font-size:14px;color:#3b454b">' +
+          this.model.get('unit') + '</span></div>'
+      }
+    }];
+  },
+  _getTooltip: function() {
+    var oTplData = {
+      tooltip_text: 'tooltip_value_unit',
+      unit: this.model.get('unit')
+    };
+
+    var currentVal = DASH_VALUE;
+    if (!wl.app.oMapper.checkOutdatedData(this.lsid)) {
+      currentVal = this.portletSensorData['hum'];
+    }
+
+    var highVal = DASH_VALUE;
+    var lowVal = DASH_VALUE;
+    if (!wl.app.oMapper.checkOutdatedData(this.lsid)) {
+      if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+          'hum_high'])) {
+        highVal = this.portletSensorData['hum_high'];
+      }
+      if (!wl.app.Dashboard.isDashed32767(this.portletSensorData[
+          'hum_low'])) {
+        lowVal = this.portletSensorData['hum_low']
+      }
+    }
+    oTplData.current_value = Utils.formatSensorReading('Humidity',
+      currentVal, wl.data.userAccountSetting);
+    oTplData.hi_value = Utils.formatSensorReading('Humidity',
+      highVal, wl.data.userAccountSetting);
+    oTplData.low_value = Utils.formatSensorReading('Humidity',
+      lowVal, wl.data.userAccountSetting);
+
+    return window.tpl['tooltip-hilow-single'](oTplData);
+  }
+});
+
+/**********************************************
+ * AQS - 7 Day AQI
+ **********************************************/
+contentsViews.structure_type_65_aqi_trend_week_graph = contentsViews.structure_type_65_aqi_trend_graph.extend({
+  className: 'portlet-aqs-trend graph-view',
+  getSeriesName: function() {
+    return 'timeSeriesWeekValues';
+  },
+  getXAxis: function () {
+    return {
+      type: 'datetime',
+      tickInterval: 3600 * 1000 * 24,
+      labels: {
+      formatter: function () {
+        var formatLabel = dayjs(this.value).utc().format(Utils.getFormatString(
+          7, wl.data.userAccountSetting.formatDateTypeId,
+          wl.data.userAccountSetting.formatTimeTypeId))
+          return formatLabel;
+      	}
+      } 
+    }
+  }
+});

@@ -1,0 +1,232 @@
+/**
+ * Modal module for Site
+ * 
+ * Manages the showing, hiding of Modal on the page
+ * 
+ * @author	Nicholas Funnell <nickf@davisnet.com>
+ * @since	2014-10-13
+ * @version 201-14-12-19 Kenny Sam - Updated Modal to be site wide use rather then just on the bullentin
+ */
+window.wl = window.wl || {};
+
+wl.app.module("Modal", function (oModule, oApp) {
+	
+	this.CLOSE_BTN = 1;	//Closing the modal. Icon button
+	this.CANCEL_BTN = 2;	//Closing the modal. Text Button
+	this.CONFIRM_BTN = 3; //Acknowledgement button. Usually no action is needs to be performed and modal is closed.
+	this.SAVE_BTN = 4;		//Button used for created new data
+	this.UPDATE_BTN = 5;		//Button used for updating existing data
+		
+	oModule.addInitializer(function () {
+		log("INIT");
+		_oModalRegion = new Marionette.Region({el: '#modal-config'});
+		_$modal = $('#modal-config');
+
+	});
+
+	// Private Vars
+
+	var log = LogFactory("MODAL:");
+	var _oModalRegion;
+	var _$modal;
+	
+
+	var _oViews = {};
+	
+	/**
+	* The container view for the Standard Model.
+	* Will have Header, Body and Footer sections
+	* 
+	* @author	Kenny Sam
+	* @since	2012-12-19
+	*/
+	_oViews.ModalStandardContainerView = Marionette.ItemView.extend({
+		template: wl.shared.tpl['modal-standard-container'],
+		className: 'modal-dialog',
+		initialize: function (options) {
+			log("Create a new Modal Standard View");
+			this.bodyView = options.bodyView;
+			this.footerView = options.footerView;
+			this.containerClass = options.containerClass;
+		},
+		onRender: function () {
+			this.bodyView.render();
+			this.footerView.render();
+			this.$('.modal-body').empty().append(this.bodyView.$el);
+			this.$('.modal-footer').empty().append(this.footerView.$el);
+			if (this.containerClass) {
+				this.$el.addClass(this.containerClass);
+			}
+		},
+		onDestroy: function() {
+			log("Conatiner View onDestroy");
+			if (typeof this.bodyView.onDestroy === 'function') {
+				this.bodyView.onDestroy();
+			}
+			if (typeof this.footerView.onDestroy === 'function') {
+				this.footerView.onDestroy();
+			}
+		}
+	});
+
+	/**
+	* The container view for the Standard Model.
+	* Will have Header, Body and Footer sections
+	* 
+	* @author	Kenny Sam
+	* @since	2012-12-19
+	*/
+	_oViews.ModalLoadingView = Marionette.ItemView.extend({
+		template: wl.shared.tpl['modal-loading'],
+		className: 'modal-dialog'
+	});
+	
+	/**
+	* Will display the Modal View with the passed in body and footer views.
+	* 
+	* @author	Kenny Sam
+	* @since	2012-12-19
+	* 
+	* @param {string}	sTitle			The title of to display for the modal
+	* @param {view}		oBodyView		A view object to be used in the modal body
+	* @param {view}		oFooterView		A view object to be used in the modal footer
+	* @param {int}		iWidth			Set the width of the Modal. By default Bootstrap sets it to 600px
+	* @param {int}		iHeight			Set the hieght of the Modal. By default this is dynamic to the content.
+	*/
+	this.showStandardModal = function (sTitle, oBodyView, oFooterView, containerClass, iWidth, iHeight) {
+		log("Showing a Standard Modal");
+		
+		var oModel = new Backbone.Model();
+		
+		//Set Header Title
+		oModel.set("sTitle", this.translateString(sTitle));
+		
+		var oView = new _oViews.ModalStandardContainerView ({
+			model: oModel,
+			bodyView: oBodyView,
+			footerView: oFooterView,
+			containerClass: containerClass
+		});
+		
+		_showModal(oView, iWidth, iHeight);
+
+	};
+	
+	/**
+	* Will display the loading modal
+	* 
+	* @author	Kenny Sam
+	* @since	2012-12-31
+	* 
+	* @param {string}	sTitle			The loading text to display
+	*/
+	this.showLoadingModal = function (sLoadingText, iWidth, iHeight) {
+		log("Showing a Loading Modal");
+		
+		var oModel = new Backbone.Model();
+		
+		//Set Header Title
+		if (typeof sLoadingText == 'undefined') {
+			sLoadingText = "Loading"
+		}
+		if (typeof iWidth == 'undefined' || iWidth == null) {
+			iWidth = 200;
+		}
+		if (typeof iHeight == 'undefined' || iHeight == null) {
+			iHeight = 200;
+		}
+		
+		oModel.set("loadingText", this.translateString(sLoadingText));
+		
+		var oView = new _oViews.ModalLoadingView ({
+			model: oModel
+		});
+	
+		_showModal(oView, iWidth, iHeight);
+		
+	};
+	
+
+	
+	
+	/**
+	* Show the modal and center it on the page.
+	* 
+	* @author	Kenny Sam
+	* @since	2014-12-31
+	*/
+	function _showModal(oView, iWidth, iHeight) {
+		_oModalRegion.show(oView);
+		_$modal.modal('show');
+		
+		//Set the size after it has been loaded.
+		oModule.setModalSize(iWidth, iHeight);
+		
+//		var iModalWidth = $(".modal-content").width();
+//		var iModalHeight = $(".modal-content").height();
+//		var iWinHeight = $(window).height();
+//		var iWinWidth = $(window).width();
+//		var iTop = (iWinHeight - iModalHeight) / 2;
+//		console.log(iWinHeight + " : " + iModalHeight)
+//		console.log("TOP: " + iTop)
+//		var iLeft = (iWinWidth - iModalWidth) / 2;
+//		_$modal.css({
+//			'left': -iLeft,
+//			'position': 'absolute'
+//		});
+	};
+	
+	/**
+	* Resize the modal to the desired size.
+	* 
+	* @author	Kenny Sam
+	* @since	2015-01-13
+	* 
+	* @param {int}	iWidth	The width of the modal. By default Bootstrap sets it to 600px
+	* @param {int}	iHeight	The height of the modal. By default this is dynamic to the content.
+	*/
+	this.setModalSize = function (iWidth, iHeight) {
+		if (typeof iWidth !== "undefined" && iWidth!=null){
+			$(".modal-content").css("width", iWidth);
+		}
+		if (typeof iHeight !== "undefined" && iHeight!=null){
+			$(".modal-content").css("height", iHeight);
+		}
+	};
+	
+	/**
+	* Hide the Modal View
+	* 
+	* @author	Nicholas Funnell <nickf@davisnet.com>
+	* @since	2014-10-13
+	*/
+	this.hideModal = function () {
+		log("Closing the Modal");
+		_$modal.modal('hide');
+		_oModalRegion.reset();
+	};
+	
+	
+	/**
+	 * BUG BUG: This is only a temp function for the modal to use.
+	 * 
+	 * @author	Kenny Sam
+	 * @since	2014-12-19
+	 * 
+	 * This function is a temp function for doing language translation.
+	 * Currently not all pages is using the oLang so we need to detect that.
+	 */
+	this.translateString = function(sString) {
+		var sConvertedString = "";
+		if (typeof oLang === "undefined"){
+			//No language conversion
+			sConvertedString = sString;
+		} else {
+			//Language file detected so convert
+			sConvertedString = oLang.getSync(sString);
+		}
+		return sConvertedString;
+	};
+
+	
+});

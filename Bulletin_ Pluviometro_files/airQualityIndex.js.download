@@ -1,0 +1,105 @@
+/**
+ * Created by anton.milko on 20-Apr-20.
+ */
+var wl = wl || {};
+
+wl.app.module('oAirQualityIndex', function(oAirQualityIndex, oAccountApp,
+  Backbone, Marionette, $) {
+
+  oAirQualityIndex.startWithParent = false;
+
+  oAirQualityIndex.AirQualityIndexView = Marionette.ItemView.extend({
+    template: wl.shared.tpl['air-quality-index'],
+    model: new Backbone.Model,
+    ui: {
+      iconClose: '.wl-icon.icon-close',
+      btnClose: '.close-btn',
+      btnSave: '.btn-save',
+      radioBtn: 'input[type="radio"]',
+      scrollContainer: '.index-desc'
+    },
+    events: {
+      'click @ui.iconClose': 'hideModal',
+      'click @ui.btnClose': 'hideModal',
+      'change @ui.radioBtn': 'onChangeIndex',
+      'click @ui.btnSave': 'saveSelectedScheme'
+    },
+    initialize: function() {
+      var airQualitySchemes = wl.__bootstrap_availableSchemes;
+      var selectedSchemeId = wl.__bootstrap_airQualitySchemeId;
+      this.model.set('airQualityIndexes', airQualitySchemes);
+      this.setSchemeById(selectedSchemeId);
+    },
+    onRender: function() {
+    	setTimeout(function (){
+    		this.ui.scrollContainer.perfectScrollbar();
+   	  }.bind(this), 300);
+    },
+    onChangeIndex: function(e) {
+      var selectedSchemeId = parseInt($(e.target).val());
+      this.setSchemeById(selectedSchemeId);
+    },
+    setSchemeById: function(selectedSchemeId) {
+      var selectedScheme = this.model.get('airQualityIndexes').forEach(
+        airQualityScheme => {
+          if (airQualityScheme.iaqSchemeId === selectedSchemeId) {
+            this.model.set('selectedAirQualityScheme',
+              airQualityScheme);
+          }
+        })
+      this.render();
+    },
+    hideModal: function() {
+      oAccountApp.Modal.hideModal();
+    },
+    saveSelectedScheme: function() {
+      var selectedSchemeId = this.model.get(
+        'selectedAirQualityScheme').iaqSchemeId;
+      var self = this;
+      $.ajax({
+        type: "GET",
+        url: "/account/saveAirQualityScheme/" + selectedSchemeId,
+        success: function(data) {
+          if (data.airQualitySchemeId != null) {
+            wl.__bootstrap_airQualitySchemeId = data.airQualitySchemeId;
+            if (self.options.cb) {
+              self.options.cb();
+            }
+            self.hideModal();
+          }
+        },
+        error: function() {}
+      });
+    }
+  });
+
+
+  // Controller
+  oAirQualityIndex.Controller = Marionette.Controller.extend({
+    show: function(cb) {
+      this.oModalBodyView = new oAirQualityIndex.AirQualityIndexView({cb:cb});
+
+      var oModalFooterView = new Marionette.ItemView({
+        template: false
+      });
+
+      oAccountApp.Modal.showStandardModal('', this.oModalBodyView,
+        oModalFooterView, 'air-quality-index');
+    },
+    onDestroy: function() {
+      oAccountApp.oAirQualityIndex.stop();
+    }
+  });
+
+  // Initializer
+  oAirQualityIndex.addInitializer(function(cb) {
+    oAirQualityIndex.controller = new oAirQualityIndex.Controller();
+    oAirQualityIndex.controller.show(cb);
+  });
+
+  // Finalizers
+  oAirQualityIndex.addFinalizer(function() {
+    oAirQualityIndex.controller.destroy();
+    delete oAirQualityIndex.controller;
+  });
+});

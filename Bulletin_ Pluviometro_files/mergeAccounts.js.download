@@ -1,0 +1,290 @@
+var wl = wl || {};
+wl.davis = wl.davis || {};
+wl.davis.views = wl.davis.views || {};
+
+wl.davis.views.MergeAccountsView = Marionette.ItemView.extend({
+  model: new Backbone.Model,
+  className: "merge-accounts",
+  template: wl.shared.tpl['merge-accounts'],
+  modelEvents: {},
+  events: {
+    'click @ui.submit': 'onSubmit',
+    'keyup input': 'handleSubmitAvailability',
+    'blur input': 'handleSubmitAvailability',
+    'paste input': 'handleSubmitAvailability'
+  },
+
+  ui: {
+    'back': '#back',
+    'username': '#username',
+    'password': '#password',
+    'processing': '#processing',
+    'mergeUsername': '#merge_username',
+    'mergePassword': '#merge_password',
+    'mergeAccountsSuccess': '#merge-accounts-success',
+    'mergeAccountsError': '.merge-accounts-error',
+    'mergeAccountsFormSection': '.merge-accounts-form-section',
+    'submit': '#submit',
+    'mergeAccountsForm': '.merge-accounts-form',
+    "iconClose": ".wl-icon.icon-close"
+  },
+  triggers: {
+    'click @ui.back': 'layout:render',
+    "click @ui.iconClose": "layout:close"
+  },
+
+  initialize: function(data) {
+    this.initModel(data);
+  },
+
+  onRender: function() {
+    this.processing(false);
+    this.ui.mergeAccountsSuccess.hide();
+    this.ui.mergeAccountsFormSection.show();
+    this.handleSubmitAvailability();
+  },
+
+  initModel: function(data) {
+    var username = '';
+    var password = '';
+    if (data[0] && data[1]) {
+      username = data[0].value;
+      password = data[1].value;
+    }
+    this.model.set('username', username);
+    this.model.set('password', password);
+    this.model.set('processing', false);
+    this.model.set('error', '');
+  },
+
+  handleSubmitAvailability: function() {
+    var arr = this.ui.mergeAccountsForm.serializeArray();
+    var formParams = {};
+    $.each(arr, function() {
+      formParams[this.name] = this.value;
+    });
+    if (formParams.username.length > 0 && formParams.password.length > 0) {
+      this.ui.submit.prop('disabled', false);
+    } else {
+      this.ui.submit.prop('disabled', true);
+    }
+  },
+
+  errorMessage: function(msg) {
+    this.ui.mergeAccountsError.html(msg);
+  },
+
+  toggleErrorClasses: function(on) {
+    this.ui.username.toggleClass('merge-accounts-error-input', on);
+    this.ui.password.toggleClass('merge-accounts-error-input', on);
+    this.ui.mergeUsername.toggleClass(
+      'merge-accounts-error-label', on);
+    this.ui.mergePassword.toggleClass('merge-accounts-error-label', on);
+  },
+
+  processing: function(show) {
+    if (show) {
+      this.ui.processing.show();
+      this.ui.submit.hide();
+    } else {
+      this.ui.processing.hide();
+      this.ui.submit.show();
+    }
+  },
+
+  onSubmit: function() {
+    this.toggleErrorClasses(false);
+    this.model.set('username', this.ui.username.val());
+    this.model.set('password', this.ui.password.val());
+    this.processing(true);
+    this.errorMessage('');
+
+    var self = this;
+    var formData = this.ui.mergeAccountsForm.serializeArray();
+    $.ajax({
+      type: "POST",
+      url: "/usr/validateMergeAccount",
+      data: formData,
+      success: function(response) {
+        self.processing(false);
+        if (response.data) {
+          self.triggerMethod('mergeAccountsConfirm:render',
+            formData);
+        } else if (response.error) {
+          self.toggleErrorClasses(true);
+          self.errorMessage(response.error.errorMessage);
+        }
+      },
+      error: function(res) {
+        self.processing(false);
+      }
+    });
+  }
+});
+
+wl.davis.views.MergeAccountsMessageView = Marionette.ItemView.extend({
+  model: new Backbone.Model,
+  template: wl.shared.tpl["merge-accounts-message"],
+  ui: {
+    "mergeAccountsMessage": ".merge-accounts-message",
+    "mergeProcessing": ".merge-processing",
+    "iconClose": ".wl-icon.icon-close",
+    "back": "#back",
+    "confirmMerge": '#submit'
+  },
+  events: {
+    "click @ui.back": "onClickBack",
+    "click @ui.confirmMerge": 'processMerge'
+  },
+  triggers: {
+    "click @ui.iconClose": "layout:close",
+  },
+  initialize: function() {
+    var usernameA = _.get(_.find(this.options.formData, {
+      name: 'username'
+    }), 'value');
+    var usernameB = wl.__bootstrap_user_username;
+    this.model.set('usernameA', usernameA);
+    this.model.set('usernameB', usernameB);
+  },
+  onClickBack: function() {
+    this.triggerMethod('mergeAccountsForm:render', this.options.data);
+  },
+  renderCompletedView: function(account, error) {
+    var self = this;
+    setTimeout(function() {
+      self.triggerMethod('mergeAccountsCompleted:render', {
+        account: account,
+        error: error
+      });
+    }, 500);
+  },
+  processMerge: function() {
+    this.ui.mergeAccountsMessage.hide();
+    this.ui.mergeProcessing.show();
+    var formData = this.options.formData;
+    var account = _.get(_.find(formData, {
+      name: 'username'
+    }), 'value');
+    var loggedInUsername = wl.__bootstrap_user_username;
+    var self = this;
+    $.ajax({
+      type: "POST",
+      url: "/usr/mergeAccount",
+      data: formData,
+      success: function(response) {
+        if (response.data) {
+          self.renderCompletedView(loggedInUsername, false);
+        } else if (response.error) {
+          self.renderCompletedView(loggedInUsername, response.error);
+        }
+      },
+      error: function(res) {
+        self.processing(false);
+      }
+    });
+  }
+});
+
+wl.davis.views.MergeAccountsCompletedView = Marionette.ItemView.extend({
+  template: wl.shared.tpl["merge-accounts-completed"],
+  model: new Backbone.Model,
+  ui: {
+    "finish": "#finish",
+    "mergeAnother": "#merge-another"
+  },
+  events: {
+    "click @ui.finish": "close",
+  },
+  triggers: {
+    "click @ui.mergeAnother": "mergeAccountsForm:render"
+  },
+  initialize: function(options) {
+    this.model.set('account', options.account);
+    this.model.set('error', options.error);
+  },
+  close: function() {
+    if (location.href.indexOf('bulletin') >= 0) {
+        location.reload();
+    } else {
+        location.href = '/bulletin';
+    }
+  }
+})
+
+wl.davis.views.MergeAccountsSuggestionView = Marionette.ItemView.extend({
+  template: wl.shared.tpl["merge-accounts-suggestion"],
+  ui: {
+    "mergeAccounts": "#merge-accounts",
+    "skip": "#skip"
+  },
+  triggers: {
+    "click @ui.mergeAccounts": "layout:renderMergeAccountsView",
+    "click @ui.skip": "layout:close",
+  }
+});
+
+wl.davis.views.MergeLayoutView = Marionette.LayoutView.extend({
+    template: wl.shared.tpl["merge-accounts-layout"],
+    regions: {
+      header: '#header',
+      body: '#body',
+      footer: '#footer',
+    },
+    childEvents: {
+      'layout:render': function() {
+        this.render();
+      },
+      'layout:close': function() {
+        if (this.options.no_return) {
+          this.close();
+        } else {
+          this.render();
+        }        
+      },
+      'layout:renderMergeAccountsView': function() {
+        this.renderMergeAccountsView();
+      },
+      'mergeAccountsConfirm:render': function(view, data) {
+        this.renderMergeAccountsConfirm(view, data);
+      },
+      'mergeAccountsForm:render': function(view, data) {
+        this.renderMergeAccountsForm(view, data);
+      },
+      'mergeAccountsCompleted:render': function(view, data) {
+        this.renderMergeAccountsCompleted(view, data);
+      },
+    },
+    close: function() {
+      wl.app.Modal.hideModal();
+    },
+
+    onRender: function() {
+      var modal = this.$el.closest('.modal-dialog');
+      if (modal.length > 0 && modal.hasClass('from-carousel')) {
+          this.showChildView('body', new wl.app.oWhatsNew.MainView());
+          modal.addClass('whats-new').removeClass('add-device');
+          this.body.currentView.renderSlideByNumber(3);
+      } else {
+          modal.removeClass('add-device');
+          this.showChildView('body', new wl.davis.views.MergeAccountsSuggestionView());
+      }
+    },
+    renderMergeAccountsView: function() {
+      this.$el.closest('.modal-dialog').addClass('add-device');
+      this.showChildView('body', new wl.davis.views.MergeAccountsView());
+    },
+    renderMergeAccountsConfirm: function(obj, data) {
+      this.showChildView('body', new wl.davis.views.MergeAccountsMessageView({
+        'formData': data
+      }));
+    },
+    renderMergeAccountsForm: function(obj, data) {
+      this.showChildView('body', new wl.davis.views.MergeAccountsView(
+        data));
+    },
+    renderMergeAccountsCompleted: function(obj, data) {
+      this.showChildView('body', new wl.davis.views.MergeAccountsCompletedView(
+        data));
+    },
+});

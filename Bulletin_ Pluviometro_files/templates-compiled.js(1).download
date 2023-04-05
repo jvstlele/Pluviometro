@@ -1,0 +1,1096 @@
+this["tpl"] = this["tpl"] || {};
+this["tpl"]["add-more-sensors"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="paymentSuccess col-md-12" style="min-width: 600px">\n    <div class="text-center">\n        <img src="/static/images/payment/addMoreSensors.png" width="120" height="120"/>\n    </div>\n    <div class="margin-top upgrade-success text-center">\n        <span data-l10n-id="additional_sensors"></span>\n    </div>\n    <div class="margin-top text-center">\n        <span data-l10n-id="add_additional_sensors"></span>\n    </div>\n</div>\n<div class="buttons-block mobile form-group center-buttons-block" style="margin-bottom: 50px">\n    <button id="submit" type="button" class="btn-payment-primary btn btn-block">\n        <span data-l10n-id="add_more_sensors" style="text-transform: capitalize"></span>\n    </button>\n    <button type="button" class="account-button btn btn-block" id="back" data-l10n-id="finish"></button>\n</div>';
+}
+return __p;
+};
+this["tpl"]["billing-address-form"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="payment-form-wrapper ';
+ if (standalone) { 
+__p+='standalone';
+ } 
+__p+=' ';
+ if (mobile) { 
+__p+='confirm-address-wrapper';
+ } 
+__p+='">\n  ';
+ if (!standalone) { 
+__p+='\n  <div class="col-md-12 header-row padding-top">\n    <div class="payment-form-header">\n      <span\n        class="payment-form-title"\n        data-l10n-id="payment_details_no_colon"\n      ></span>\n    </div>\n  </div>\n  ';
+ } 
+__p+='\n  ';
+ if (standalone && mobile) { 
+__p+='\n    <div class="header-title title-form" data-l10n-id="payment"></div>\n    ';
+ if (activationCode) { 
+__p+='\n        <div class="header-desc" data-l10n-id="card_info_renewal_payments"></div>\n    ';
+ } else { 
+__p+='\n        <div class="header-desc" data-l10n-id="card_info_auto_renewal"></div>\n    ';
+ } 
+__p+='\n  ';
+ } 
+__p+='\n\n  <!-- mobile info section start -->\n  ';
+ if (trialMode) { 
+__p+='\n  <div class="row payment-info--mobile col-md-12" id="trial-mode-mobile">\n    <div\n      class="payment-info-header--mobile"\n      data-l10n-id="one_wl_trial_upgrade"\n      data-l10n-args=\'{ "newSubscrName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" }\'\n    ></div>\n    <div class="payment-info-text" data-l10n-id="free_for_30_days"></div>\n  </div>\n  ';
+ } else { 
+__p+='\n  <div class="row payment-info--mobile col-md-12" id="no-trial-mode-mobile">\n    ';
+ if (existingUpgrades) { 
+__p+='\n    <div\n      class="payment-info-header--mobile"\n      data-l10n-id="purchase_wl_upgrades"\n    ></div>\n    ';
+ } else { 
+__p+=' ';
+ if (selectedServicePlan) { 
+__p+='\n    <div\n      data-l10n-id="purchase_of_service_plan"\n      data-l10n-args=\'{ "duration": "'+
+((__t=( selectedServicePlan.interval ))==null?'':__t)+
+'" }\'\n    ></div>\n    ';
+ } else { 
+__p+='\n    <div\n      class="payment-info-header--mobile"\n      data-l10n-id="purchase_of_one_wl_upgrade"\n      data-l10n-args=\'{ "newSubscrName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" }\'\n    ></div>\n    ';
+ } 
+__p+=' ';
+ } 
+__p+='\n    <div class="payment-amount-header--mobile">\n      <span class="total-info-header--mobile" data-l10n-id="total"></span>\n      ';
+ if (beforeTax) { 
+__p+='(<span data-l10n-id="before_tax"></span>)';
+ } 
+__p+=':\n      <span class="payment-info-total--mobile">\n        <span id="amountDueMobile"> '+
+((__t=( totalAmountDue))==null?'':__t)+
+' </span> USD\n      </span>\n    </div>\n  </div>\n  ';
+ } 
+__p+='\n  <!-- mobile info section end -->\n\n  <div class="payment-form">\n    <!-- different switch style for mobile flow -->\n    ';
+ if (window.matchMedia("(max-width: 992px)").matches) { 
+__p+='\n    <div class="col-md-12 plans-duration-group">\n      ';
+ _.each(subscriptionTerms, function(term, i) { 
+__p+='\n      <div>\n        <input type="radio" id="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'"\n        value="'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'" class="subscriptionTerm"\n        name="subscriptionTerm" data-length="'+
+((__t=( term.lengthInMonths ))==null?'':__t)+
+'"\n        data-price="'+
+((__t=( term.price ))==null?'':__t)+
+'" ';
+ if (currentSubscrLengthInMonths==36 &&
+        term.lengthInMonths==12) { 
+__p+=' disabled ';
+ } 
+__p+=' ';
+ if
+        (term.lengthInMonths==lengthInMonths) { 
+__p+=' checked ';
+ } 
+__p+='>\n        <label for="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'">\n          ';
+ if (term.lengthInMonths==12) { 
+__p+='\n          <span data-l10n-id="year_1_plan"></span>\n          ';
+ } else if (term.lengthInMonths==36) { 
+__p+='\n          <span data-l10n-id="year_3_plan"></span>&nbsp; (<span\n            data-l10n-id="amount_off"\n            data-l10n-args=\'{"amount": "15%"}\'\n          ></span\n          >) ';
+ } 
+__p+='\n        </label>\n      </div>\n      ';
+ }); 
+__p+='\n    </div>\n    ';
+ } else { 
+__p+=' ';
+ if (subscriptionTerms.length> 0) { 
+__p+='\n    <div class="subscription-length payment-checkbox-group">\n      <div\n        class="col-md-4 col-xs-12 subscription-length-label"\n        data-l10n-id="subscription_length"\n      ></div>\n      <div class="col-md-8 col-xs-12" style="margin-bottom: 10px">\n        <ul>\n          ';
+ _.each(subscriptionTerms, function(term, i) { 
+__p+='\n          <li class="col-md-6 col-xs-6">\n            <input type="radio" id="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'"\n            value="'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'" class="subscriptionTerm"\n            name="subscriptionTerm" data-length="'+
+((__t=( term.lengthInMonths ))==null?'':__t)+
+'" ';
+
+            if (currentSubscrLengthInMonths==36 && term.lengthInMonths==12) { 
+__p+='\n            disabled ';
+ } 
+__p+=' ';
+ if (term.lengthInMonths==lengthInMonths) { 
+__p+='\n            checked ';
+ } 
+__p+=' >\n            <label for="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'">\n              '+
+((__t=( getTermTranslationKey(term.name) ))==null?'':__t)+
+'\n            </label>\n            <div class="check"></div>\n          </li>\n          ';
+ }); 
+__p+='\n        </ul>\n      </div>\n      <div class="divider row"></div>\n    </div>\n    ';
+ } 
+__p+=' ';
+ } 
+__p+='\n    <form class="form" id="payment-form" role="form">\n      <!--\n                        <div class="row" id="couponRow">\n                        <div class="form-group col-sm-8">\n                        <label for="couponCode" id="couponCodeLabel" class="control-label" data-l10n-id="coupon_code"></label>\n                        <label for="couponCode" id="invalidCouponCodeLabel" class="control-label" data-l10n-id="invalid_coupon_code"></label>\n                        <div class="code-input">\n                        <input type="text" id="couponCode" class="form-control card-coupon" data-l10n-id="coupon_code_input" name="couponCode">\n                        </div>\n                        <div id="valid-coupon-icon" class="code-ok">\n                        <i class="wl-icon valid-coupon-icon icon-radiofill">\n                        </i>\n                        </div>\n                        </div>\n                        <div class="form-group col-sm-4">\n                            <label for="">&nbsp;</label>\n                            <button type="button" id="couponCodeBtn" class="btn btn-payment-primary btn-block btn-validate-code">\n                            Validate Code\n                            </button>\n                        </div>\n\n                        </div>\n                        -->\n      <!--\n                <div class="form-group row">\n                <div class="col-md-12">\n                    <button id="cancelPayment" type="button" class="btn btn-block btn-default" data-l10n-id="Cancel_payment"></button>\n                </div>\n                </div>\n                -->\n\n      <fieldset class="address-section col-md-12">\n        <!-- Country -->\n        <div class="form-group row country-group">\n          <div class="col-sm-12 ui-widget">\n            <label class="control-label" for="country" data-l10n-id="country">\n            </label>\n            <i class="wl-icon icon-locationpin"></i>\n            <select id="country" value="'+
+((__t=( countryId ))==null?'':__t)+
+'" readonly></select>\n            <div class="custom-combobox">\n              <input\n                type="text"\n                title=""\n                data-l10n-id="country_input"\n                name="country"\n                class="form-control country"\n                autocomplete="none"\n                onfocus="this.setAttribute(\'autocomplete\', \'none\');"\n                value="'+
+((__t=( countryName ))==null?'':__t)+
+'"\n              />\n            </div>\n          </div>\n        </div>\n        <!-- Address -->\n        <div class="form-group row" style="display: none">\n          <div class="col-sm-12">\n            <label class="control-label" for="address1" data-l10n-id="address1">\n            </label>\n            <input\n              type="text"\n              id="address1"\n              class="form-control"\n              data-l10n-id="address1_input"\n              name="address1"\n              value="'+
+((__t=( address1 ))==null?'':__t)+
+'"\n            />\n          </div>\n        </div>\n        <!-- City -->\n        <div class="form-group row" style="display: none">\n          <div class="col-sm-12">\n            <label class="control-label" for="city" data-l10n-id="city">\n            </label>\n            <input\n              type="text"\n              id="city"\n              class="form-control"\n              data-l10n-id="city_input"\n              name="city"\n              value="'+
+((__t=( city ))==null?'':__t)+
+'"\n            />\n          </div>\n        </div>\n        <div class="row">\n          <!-- State -->\n          <div class="form-group col-sm-6 col-xs-6" style="display: none">\n            <label\n              class="control-label"\n              for="state"\n              data-l10n-id="state_location"\n            >\n            </label>\n            <input\n              type="text"\n              id="state"\n              class="form-control"\n              data-l10n-id="state_location_input"\n              name="state"\n              value="'+
+((__t=( state ))==null?'':__t)+
+'"\n            />\n          </div>\n          <!-- Zip Code -->\n          <div class="form-group zip-code col-sm-6 col-xs-6">\n            <label class="control-label" for="zipCode" data-l10n-id="zip_code">\n            </label>\n            <input\n              type="text"\n              id="zipCode"\n              class="form-control"\n              data-l10n-id="zip_code_input"\n              name="zipCode"\n              value="'+
+((__t=( zipCode ))==null?'':__t)+
+'"\n            />\n          </div>\n        </div>\n      </fieldset>\n      ';
+ if (!standalone) { 
+__p+='\n      <!-- coupon code -->\n      <div id="couponRow">\n        <div class="payment-form">\n          <div class="form-group col-sm-12">\n            <label\n              for="couponCode"\n              id="couponCodeLabel"\n              class="control-label"\n              data-l10n-id="coupon_code"\n            ></label>\n            <div class="code-input">\n              <input\n                type="text"\n                id="couponCode"\n                class="form-control card-coupon"\n                data-l10n-id="coupon_code_input"\n                name="couponCode"\n                value="'+
+((__t=( couponCode ))==null?'':__t)+
+'"\n              />\n            </div>\n          </div>\n        </div>\n      </div>\n      <!-- end coupon code -->\n      ';
+ } 
+__p+='\n      <p class="col-md-12" id="invalid-address" style="display:none; padding: 0 15px;">\n        <span class="address-error" data-l10n-id="invalid_address"></span>\n        <a href="#" id="invalid-address-continue">\n        <span class="invalid-address-continue" data-l10n-id="invalid_address_continue"></span>\n        </a>\n      </p>\n      <div class="payment-error col-md-12" id="paymentError" style="padding: 0 15px;"></div>\n    </form>\n  </div>\n</div>\n';
+ if (!standalone) { 
+__p+='\n<!-- make payment button new card -->\n<div class="form-group col-md-12 payments-buttons-panel" id="payment-form-buttons">\n  <button\n    id="continuePurchase"\n    type=""\n    class="submitPayment btn-payment-primary btn btn-block"\n  >\n  <span data-l10n-id="continue_purchase"></span>\n  <span class="loading-icon" style="display: none;"></span>\n  </button>\n  <button\n    type="button"\n    id="payment-back"\n    data-l10n-id="Back"\n    class="account-button btn btn-block"\n  ></button>\n</div>\n';
+ } 
+__p+='\n';
+}
+return __p;
+};
+this["tpl"]["card-details-form"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="payment-form-wrapper">\n  <div class="col-md-12 row header-row padding-top">\n    <div class="payment-form-header">\n      ';
+ if (paymentDetails && stripePaymentMethodId) { 
+__p+='\n      <span class="use-saved" data-l10n-id="use_saved_card"></span>\n      ';
+ } 
+__p+='\n    </div>\n  </div>\n  <div class="payment-form" style="display: inline-block">\n    <div class="payment-error" id="paymentError" style="margin: 0 30px;"></div>\n    <form class="form" id="payment-form" role="form">\n      <div class="row col-md-12">\n        ';
+ if (paymentDetails && stripePaymentMethodId) { 
+__p+='\n        <div class="use-saved--mobile" data-l10n-id="use_saved_card"></div>\n        ';
+ } 
+__p+='\n      </div>\n      <fieldset class="credit-card-section col-md-12">\n        <div class="form-group row">\n          <div class="col-sm-12">\n            <div class="row card-details">\n              <div class="form-group col-sm-6 col-xs-6">\n                <label for="accountCardNumber" data-l10n-id="card_number"></label>\n                <div class="card-stripe-element card-number" id="accountCardNumber"></div>\n              </div>\n              <div class="form-group col-sm-3 col-xs-3">\n                <label class="control-label" for="accountCardExpiration"\n                       data-l10n-id="expiration">\n                </label>\n                <div class="card-stripe-element card-exp" id="accountCardExpiration"></div>\n              </div>\n              <div class="form-group col-sm-3 col-xs-3">\n                <label class="control-label" for="accountCardCvc">CVC\n                </label>\n                <div class="card-stripe-element card-cvc" id="accountCardCvc"></div>\n              </div>\n            </div>\n          </div>\n        </div>\n      </fieldset>\n      <div id="saved-card" class="col-md-12">\n        ';
+ if (paymentDetails && stripePaymentMethodId) { 
+__p+='\n        <div class="saved-card-header" data-l10n-id="your_card"></div>\n        <div class="saved-card-info-block">\n          <div class="saved-card-number">\n            xxxx-xxxx-xxxx-<span style="font-size: 18px">\n              '+
+((__t=( paymentDetails.last4Digits ))==null?'':__t)+
+'\n            </span>\n          </div>\n          <div class="saved-card-expiration">\n            ';
+ if (!cardExpired) { 
+__p+='\n            <span data-l10n-id="expires"></span>: '+
+((__t=( paymentDetails.expMonth
+            ))==null?'':__t)+
+'/'+
+((__t=( paymentDetails.expYear ))==null?'':__t)+
+' ';
+ } else { 
+__p+='\n            <div class="saved-card-expired">\n              <span data-l10n-id="card_expired_on"></span>\n              '+
+((__t=( paymentDetails.expMonth ))==null?'':__t)+
+'/'+
+((__t=( paymentDetails.expYear ))==null?'':__t)+
+'\n            </div>\n            ';
+ } 
+__p+='\n          </div>\n        </div>\n        <div class="saved-card-enter-new">\n          ';
+ if (!cardExpired) { 
+__p+='\n          <span data-l10n-id="dont_want_this_card"></span>\n          <span class="saved-card-link" data-l10n-id="enter_new_card"></span>\n          ';
+ } else { 
+__p+='\n          <span class="saved-card-link" data-l10n-id="enter_new_details"></span>\n          ';
+ } 
+__p+='\n        </div>\n        ';
+ } 
+__p+='\n      </div>\n      <p class="col-md-12" id="invalid-address" style="display:none; padding: 15px;">\n        <span class="address-error" data-l10n-id="invalid_address"></span>\n        <a href="#" id="invalid-address-continue">\n        <span class="invalid-address-continue" data-l10n-id="invalid_address_continue"></span>\n        </a>\n      </p>\n      \n      <fieldset class="address-section col-md-12">\n        <!-- Country -->\n        <div class="form-group row country-group">\n          <div class="col-sm-12 ui-widget">\n            <label class="control-label" for="country" data-l10n-id="country">\n            </label>\n            <i class="wl-icon icon-locationpin"></i>\n            <select id="country" value="'+
+((__t=( countryId ))==null?'':__t)+
+'" readonly></select>\n            <div class="custom-combobox">\n              <input\n                type="text"\n                title=""\n                data-l10n-id="country_input"\n                name="country"\n                class="form-control country"\n                autocomplete="none"\n                onfocus="this.setAttribute(\'autocomplete\', \'none\');"\n                value="'+
+((__t=( countryName ))==null?'':__t)+
+'"\n              />\n            </div>\n          </div>\n        </div>\n        <!-- Address -->\n        <div class="form-group row" style="display: none">\n          <div class="col-sm-12">\n            <label class="control-label" for="address1" data-l10n-id="address1">\n            </label>\n            <input\n              type="text"\n              id="address1"\n              class="form-control"\n              data-l10n-id="address1_input"\n              name="address1"\n              value="'+
+((__t=( address1 ))==null?'':__t)+
+'"\n            />\n          </div>\n        </div>\n        <!-- City -->\n        <div class="form-group row" style="display: none">\n          <div class="col-sm-12">\n            <label class="control-label" for="city" data-l10n-id="city">\n            </label>\n            <input\n              type="text"\n              id="city"\n              class="form-control"\n              data-l10n-id="city_input"\n              name="city"\n              value="'+
+((__t=( city ))==null?'':__t)+
+'"\n            />\n          </div>\n        </div>\n        <div class="row">\n          <!-- State -->\n          <div class="form-group col-sm-6 col-xs-6" style="display: none">\n            <label\n              class="control-label"\n              for="state"\n              data-l10n-id="state_location"\n            >\n            </label>\n            <input\n              type="text"\n              id="state"\n              class="form-control"\n              data-l10n-id="state_location_input"\n              name="state"\n              value="'+
+((__t=( state ))==null?'':__t)+
+'"\n            />\n          </div>\n          <!-- Zip Code -->\n          <div class="form-group zip-code col-sm-6 col-xs-6">\n            <label class="control-label" for="zipCode" data-l10n-id="zip_code">\n            </label>\n            <input\n              type="text"\n              id="zipCode"\n              class="form-control"\n              data-l10n-id="zip_code_input"\n              name="zipCode"\n              value="'+
+((__t=( zipCode ))==null?'':__t)+
+'"\n            />\n          </div>\n        </div>\n      </fieldset>\n    </form>\n  </div>\n</div>\n';
+}
+return __p;
+};
+this["tpl"]["comparison-chart"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="comparison-chart">\n    <div class="comparison-chart-header">\n        <div class="first-col" style="padding-left: 7px;" data-l10n-id="feature"></div>\n        <div class="second-col">PRO</div>\n        <div class="third-col">PRO+</div>\n    </div>\n    <div class="comparison-chart-body">\n        <div class="comparison-chart-feature-row empty">\n            <div class="first-col"><span style="padding-left: 22px;" data-l10n-id="current_conditions"></span></div>\n            <div class="second-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n            <div class="third-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n        </div>\n        <div class="comparison-chart-feature-row">\n            <div class="first-col">\n                <i class="wl-icon icon-faq"\n                    id="historical-data-tooltip"\n                    data-title=""\n                    data-toggle="tooltip"\n                    data-html="true"\n                    data-container="body">\n                </i>\n                <span data-l10n-id="historical_data"></span>\n            </div>\n            <div class="second-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n            <div class="third-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n        </div>\n        <div class="comparison-chart-feature-row">\n            <div class="first-col">\n                <i class="wl-icon icon-faq"\n                    id="bulletin-tooltip"\n                    data-title=""\n                    data-toggle="tooltip"\n                    data-html="true"\n                    data-container="body">\n                </i>\n                <span data-l10n-id="try_pro_features_bulletin"></span>\n            </div>\n            <div class="second-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n            <div class="third-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n        </div>\n        <div class="comparison-chart-feature-row">\n            <div class="first-col">\n                <i class="wl-icon icon-faq"\n                    id="map-tooltip"\n                    data-title=""\n                    data-toggle="tooltip"\n                    data-html="true"\n                    data-container="body">\n                </i>\n                <span data-l10n-id="try_pro_features_map"></span>\n            </div>\n            <div class="second-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n            <div class="third-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n        </div>\n        <div class="comparison-chart-feature-row">\n            <div class="first-col">\n                <i class="wl-icon icon-faq"\n                   id="chart-tooltip"\n                   data-title=""\n                   data-toggle="tooltip"\n                   data-html="true"\n                   data-container="body">\n                </i>\n                <span data-l10n-id="try_pro_features_chart"></span>\n            </div>\n            <div class="second-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n            <div class="third-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n        </div>\n        <div class="comparison-chart-feature-row">\n            <div class="first-col">\n                <i class="wl-icon icon-faq"\n                   id="data-tooltip"\n                   data-title=""\n                   data-toggle="tooltip"\n                   data-html="true"\n                   data-container="body">\n                </i>\n                <span data-l10n-id="try_pro_features_data"></span>\n            </div>\n            <div class="second-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n            <div class="third-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n        </div>\n        <div class="comparison-chart-feature-row">\n            <div class="first-col">\n                <i class="wl-icon icon-faq"\n                   id="mobilize-tooltip"\n                   data-title=""\n                   data-toggle="tooltip"\n                   data-html="true"\n                   data-container="body">\n                </i>\n                <span data-l10n-id="try_pro_features_mobilize"></span>\n            </div>\n            <div class="second-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n            <div class="third-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n        </div>\n        <div class="comparison-chart-feature-row">\n            <div class="first-col">\n                <i class="wl-icon icon-faq"\n                   id="ipm-tooltip"\n                   data-title=""\n                   data-toggle="tooltip"\n                   data-html="true"\n                   data-container="body">\n                </i>\n                <span>IPM</span>\n            </div>\n            <div class="second-col"><i class="chk-icon wl-icon icon-close not-available"></i></div>\n            <div class="third-col"><i class="chk-icon wl-icon icon-radiofill available"></i></div>\n        </div>\n        <div class="comparison-chart-feature-row">\n            <div class="first-col">\n                <i class="wl-icon icon-faq"\n                   id="pro-shares-tooltip"\n                   data-title=""\n                   data-toggle="tooltip"\n                   data-html="true"\n                   data-container="body">\n                </i>\n                <span data-l10n-id="pro_shares"></span>\n            </div>\n            <div class="second-col">6</div>\n            <div class="third-col">10</div>\n        </div>\n        <div class="comparison-chart-feature-row">\n            <div class="first-col">\n                <i class="wl-icon icon-faq"\n                   id="third-party-intervals-tooltip"\n                   data-title=""\n                   data-toggle="tooltip"\n                   data-html="true"\n                   data-container="body">\n                </i>\n                <span data-l10n-id="third_party_intervals"></span>\n            </div>\n            <div class="second-col" data-l10n-id="five_min_interval"></div>\n            <div class="third-col" data-l10n-id="one_min_interval"></div>\n        </div>\n    </div>\n    <div class="feature-desc-block">\n        <div class="feature-name"></div>\n        <div class="feature-desc"></div>\n    </div>\n</div>\n<div class="comparison-chart-button-block">\n    <button type="button" class="btn-payment-primary btn btn-block" data-l10n-id="close"></button>\n</div>\n\n';
+}
+return __p;
+};
+this["tpl"]["confirm-address"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="payment-form-wrapper">\n    <div class="col-md-12 padding-top">\n        <div class="payment-form-header thin-border">\n            <div class="confirm-address-title">\n                <div data-l10n-id="confirm_address"></div>\n                <span data-l10n-id="confirm_address_desc"></span>\n            </div>\n        </div>\n    </div>\n\n    <div class="col-md-12 confirm-address payment-checkbox-group">\n        ';
+ if (validatedAddresses && validatedAddresses.length> 0) { 
+__p+='\n            <p>\n            <ul style="margin-top: 0;padding-top: 2px;">\n                ';
+ _.each(validatedAddresses, function(address, i) { 
+__p+='\n                    <li>\n                        <input type="radio" id="confirmed_address_'+
+((__t=( i ))==null?'':__t)+
+'" value="'+
+((__t=( i ))==null?'':__t)+
+'" class="confirmedAddress"\n                            name="confirmed_address" ';
+ if(selectedAddressIndex==i) { 
+__p+=' checked="checked" ';
+ } 
+__p+='>\n                            <label for="confirmed_address_'+
+((__t=( i ))==null?'':__t)+
+'">\n                                ';
+ if (address.address1) { 
+__p+='\n                                    '+
+((__t=( address.address1 ))==null?'':__t)+
+',\n                                ';
+ } 
+__p+='\n                                ';
+ if (address.address2 && address.address2 !== 'Local Delivery') { 
+__p+='\n                                    '+
+((__t=( address.address2 ))==null?'':__t)+
+',\n                                ';
+ } 
+__p+='\n                                ';
+ if (address.city) { 
+__p+='\n                                    '+
+((__t=( address.city ))==null?'':__t)+
+',\n                                ';
+ } 
+__p+='\n                                ';
+ if (address.state) { 
+__p+='\n                                    '+
+((__t=( address.state ))==null?'':__t)+
+',\n                                ';
+ } else { 
+__p+='\n                                    '+
+((__t=( address.zipCode ))==null?'':__t)+
+',\n                                ';
+ } 
+__p+='\n                                '+
+((__t=( countryName ))==null?'':__t)+
+'\n                                ';
+ if (address.state) { 
+__p+=',\n                                ';
+ } 
+__p+='\n                                ';
+ if (address.state) { 
+__p+='\n                                    '+
+((__t=( address.zipCode ))==null?'':__t)+
+'\n                                ';
+ } 
+__p+='\n                            </label>\n                            <div class="check"></div>\n                    </li>\n                    ';
+ }); 
+__p+='\n            </ul>\n            </p>\n        ';
+ } 
+__p+='\n        <!-- ';
+ if (newUgradesAmountDue> 0) { 
+__p+='\n            <p style="min-width: 470px;">\n                <span>\n                    '+
+((__t=( newSubscrName ))==null?'':__t)+
+' <span data-l10n-id="upgrade"></span>\n                </span>: <span class="newUgradesAmountDue">\n                    '+
+((__t=( newUgradesAmountDue ))==null?'':__t)+
+'\n                </span> USD\n            </p>\n        ';
+ } 
+__p+='\n        ';
+ if (existingUpgradesAmountDue> 0) { 
+__p+='\n            <p>\n                <span data-l10n-id="existing_pro_upgrades"></span> <span>('+
+((__t=( existingUpgrades ))==null?'':__t)+
+'\n                        )</span>:\n                $<span class="existingUpgradesAmountDue">\n                    '+
+((__t=( existingUpgradesAmountDue ))==null?'':__t)+
+'\n                </span>\n            </p>\n        ';
+ } 
+__p+='\n        ';
+ if (taxDue> 0) { 
+__p+='\n            <p>\n                <span>\n                    ';
+ if(countryCode === 'US') { 
+__p+='\n                        Tax\n                    ';
+ } else { 
+__p+='\n                        VAT\n                    ';
+ } 
+__p+='\n                        ('+
+((__t=(taxRate))==null?'':__t)+
+'%): '+
+((__t=( taxDue ))==null?'':__t)+
+' USD\n                </span>\n            </p>\n            <p class="tax-exemption-instructions" data-l10n-id="tax_exemption_instructions">\n\n            </p>\n        ';
+ } 
+__p+='\n        ';
+ if (couponDiscount) { 
+__p+='\n            <p>\n                <span data-l10n-id="coupon_discount"></span> <span>: -'+
+((__t=(
+                        couponDiscount ))==null?'':__t)+
+' USD</span>\n            </p>\n        ';
+ } 
+__p+='\n        <div class="total-amount">\n            <div>\n                <span data-l10n-id="total"></span>:\n                ';
+ if (customerCurrency !== 'USD') { 
+__p+='\n                    ';
+ if (totalAmountDue != null) { 
+__p+='\n                        '+
+((__t=( Number(totalAmountDue).toFixed(2) ))==null?'':__t)+
+' USD\n                    ';
+ } 
+__p+='\n                ';
+ } 
+__p+='\n            </div>\n            <div class="total-amount_value">\n                <span class="totalAmountDue">\n                    ';
+ if (totalAmountCustomerCurrency != null) { 
+__p+='\n                        '+
+((__t=( Number(totalAmountCustomerCurrency).toFixed(2) ))==null?'':__t)+
+'\n                    ';
+ } 
+__p+='\n                </span> '+
+((__t=( customerCurrency ))==null?'':__t)+
+'\n            </div>\n        </div>\n        ';
+ if (customerCurrency !== 'USD') { 
+__p+='\n            <br>\n            <p>\n                <small data-l10n-id="displaying_price_in_local_currency"></small>\n            </p>\n        ';
+ } 
+__p+=' -->\n    </div>\n    <div class="col-md-12 payment-error" id="paymentError" style="padding: 0 15px;"></div>\n</div>\n<div class="form-group col-md-12 payments-buttons-panel" id="confirm-and-purchase">\n    <button type="button" id="confirmAddressBtn"\n        class="submitPayment btn-payment-primary btn btn-block">\n            <span data-l10n-id="Next"></span>\n            <span class="loading-icon" style="display: none;"></span>\n    </button>\n    <button type="button" id="payment-back" data-l10n-id="Back" class="account-button btn btn-block"></button>\n</div>';
+}
+return __p;
+};
+this["tpl"]["confirmCancel"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="landing-background container-fluid">\n<div class="root-form-container cancel-trial margin-top">\n  <div class="col-md-12">\n    <div class="row cancel-payment-container">\n      <div class="col-md-12">\n        <div class="cancel-payment-header text-center" data-l10n-id="cancel_free_trial">\n        </div>\n      </div>\n      <div class="col-md-12">\n          <p style="margin-top: 26px;" data-l10n-id="free_trial_desc">\n          </p>\n      </div>\n        <div class="col-md-12 button-container margin-top">\n          <div class="col-md-3 col-md-offset-6">\n            <a href="/bulletin" type="button" class="btn payment-btn btn-use-basic btn-outline"\n               data-l10n-id="fine_with_basic">\n            </a>\n          </div>\n          <div class="col-md-3">\n            <a href="#makePayment/'+
+((__t=( upgradeSystemId ))==null?'':__t)+
+'/'+
+((__t=( newArchivalRate ))==null?'':__t)+
+'/true/'+
+((__t=(subscrType))==null?'':__t)+
+'" type="button"\n               class="btn payment-btn btn-get-weather-pro" data-l10n-id="want_free_trial">\n            </a>\n          </div>\n        </div>\n    </div>\n  </div>\n</div>\n</div>\n';
+}
+return __p;
+};
+this["tpl"]["confirmPayment"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="col-md-6 col-md-offset-3">\n  <div class="col-md-10 col-md-offset-1">\n\n    <div class="payment-form-container" id="confirmPayment">\n      <div class="col-md-12 header-row text-center padding-top">\n        <span class="payment-form-header">Confirm Upgrade</span>\n      </div>\n\n      <div class="col-md-12 payment-form padding-top">\n        <div class="row text-center form-group">\n          <span class="text-danger" id="paymentError"></span>\n        </div>\n        <div class="row text-center form-group">\n          <p class="text-center">Your credit card will be charged $100.00 for this upgrade.\n          </p>\n            <p>\n              Please click Submit Payment button to proceed with your payment.\n            </p>\n        </div>\n        <form class="form" id="payment-form" role="form">\n              <input type="hidden" id="paymentToken">\n          <div class="row form-group">\n            <div class="col-md-12">\n              <button id="submitPayment" type="submit" class="submitPayment btn btn-block">Submit Payment</button>\n            </div>\n          </div>\n          <div class="form-group row">\n            <div class="col-md-12">\n              <button id="cancelPayment" type="button" class="btn btn-block btn-default">Cancel</button>\n            </div>\n          </div>\n        </form>\n      </div>\n    </div>\n\n    <div class="" id="paymentSuccess">\n      <div class="col-md-12 header-row text-center padding-top">\n        <span class="payment-form-header">Upgrade Successful</span>\n      </div>\n\n      <div class="col-md-12 payment-form padding-top">\n        <div class="row text-center form-group">\n          <p class="text-center">Thank you for your payment. </p>\n          <p class="text-center">\n          Your Account subscription has been upgraded to Tier 1.</p>\n        </div>\n      </div>\n    </div>\n  </div>\n</div>\n';
+}
+return __p;
+};
+this["tpl"]["connection-issue"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="connection-issue">\n    <div class="wrapper">\n        <div class="connection-issue__header" data-l10n-id="connection_issue"></div>\n        <div class="connection-issue__desc" data-l10n-id="connection_issue_upgrade_desc"></div>\n    </div>\n    <button id="connection-issue__retry" data-l10n-id="retry" class="btn-payment-primary btn btn-block"></button>\n</div>\n';
+}
+return __p;
+};
+this["tpl"]["layout"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="layout-hook"></div>\n';
+}
+return __p;
+};
+this["tpl"]["makePayment"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="landing-background">\n  <div class="payment-details-root-form-container">\n    <div class="payments-loading-spinner"></div>\n    <div class="payment-form-container" style="display: none">\n      <div id="full-width-region"></div>\n      <div id="main-region" class="col-md-7 col-sm-12 col-xs-12 credit-card-form form-section"></div>\n      <div id="details-region" class="col-md-5 col-sm-5 col-xs-5 subscription-details form-section"></div>\n      <div id="connection-issue"></div>\n    </div>\n  </div>\n</div>';
+}
+return __p;
+};
+this["tpl"]["payment-form"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="payment-form-wrapper">\n    <div class="col-md-12 header-row padding-top">\n        <div class="payment-form-header">\n            ';
+ if (!standalone || reactivateDevice) { 
+__p+='\n                <span class="payment-form-title" data-l10n-id="payment_details_no_colon"></span>\n\t\t\t';
+ } 
+__p+='\n\t\t\t';
+ if (paymentDetails && stripePaymentMethodId) { 
+__p+='\n\t\t\t\t<span class="use-saved" data-l10n-id="use_saved_card"></span>\n\t\t\t';
+ } 
+__p+='\n        </div>\n    </div>\n    <div class="col-md-12 payment-form">\n        <div class="payment-error" id="paymentError"></div>\n        <form class="form" id="payment-form" role="form">\n            <div class="row col-md-12">\n                ';
+ if (paymentDetails && stripePaymentMethodId) { 
+__p+='\n                    <div class="use-saved--mobile" data-l10n-id="use_saved_card"></div>\n                ';
+ } 
+__p+='\n            </div>\n            <fieldset class="credit-card-section col-md-12">\n                <div class="row">\n                    <div class="row card-details">\n                        <div class="form-group col-sm-6 col-xs-6">\n                            <label for="cardNumber" data-l10n-id="card_number"></label>\n                            <div class="card-stripe-element card-number" id="cardNumber"></div>\n                        </div>\n                        <div class="form-group col-sm-3 col-xs-3">\n                            <label class="control-label" for="expiration"\n                                   data-l10n-id="expiration">\n                            </label>\n                            <div class="card-stripe-element card-exp" id="expiration"></div>\n                        </div>\n                        <div class="form-group col-sm-3 col-xs-3">\n                            <label class="control-label" for="cvc">CVC\n                            </label>\n                            <div class="card-stripe-element card-cvc" id="cvc"></div>\n                        </div>\n                    </div>\n                </div>\n            </fieldset>\n            <div id="saved-card">\n                ';
+ if (paymentDetails && stripePaymentMethodId) { 
+__p+='\n                    <div class="saved-card-header" data-l10n-id="your_card"></div>\n                    <div class="saved-card-info-block">\n                        <div class="saved-card-number">\n                            xxxx-xxxx-xxxx-<span style="font-size: 18px;">\n                                '+
+((__t=( paymentDetails.last4Digits ))==null?'':__t)+
+'\n                            </span>\n                        </div>\n                        <div class="saved-card-expiration">\n                            ';
+ if (!cardExpired) { 
+__p+='\n                                <span data-l10n-id="expires"></span>:\n                                '+
+((__t=( paymentDetails.expMonth ))==null?'':__t)+
+'/'+
+((__t=(
+                                        paymentDetails.expYear ))==null?'':__t)+
+'\n                            ';
+ } else { 
+__p+='\n                                <div class="saved-card-expired">\n                                    <span\n                                        data-l10n-id="card_expired_on"></span>\n                                    '+
+((__t=( paymentDetails.expMonth ))==null?'':__t)+
+'/'+
+((__t=(
+                                            paymentDetails.expYear ))==null?'':__t)+
+'\n                                </div>\n                            ';
+ } 
+__p+='\n                        </div>\n                    </div>\n                    <div class="saved-card-enter-new">\n                        ';
+ if (!cardExpired) { 
+__p+='\n                            <span data-l10n-id="dont_want_this_card"></span>\n                            <span class="saved-card-link"\n                                data-l10n-id="enter_new_card"></span>\n                            ';
+ } else { 
+__p+='\n                                <span class="saved-card-link"\n                                    data-l10n-id="enter_new_details"></span>\n                            ';
+ } 
+__p+='\n                    </div>\n                ';
+ } 
+__p+='\n            </div>\n                <!-- coupon code -->\n                <!-- <div id="couponRow">\n                    <div class="payment-form">\n                        <div class="form-group col-sm-12">\n                            <label for="couponCode" id="couponCodeLabel"\n                                class="control-label"\n                                data-l10n-id="coupon_code"></label>\n                            <div class="code-input">\n                                <input type="text" id="couponCode"\n                                    class="form-control card-coupon"\n                                    data-l10n-id="coupon_code_input" name="couponCode"\n                                    value="'+
+((__t=( couponCode ))==null?'':__t)+
+'">\n                            </div>\n                        </div>\n                    </div>\n                </div> -->\n            <!-- end coupon code -->\n            <br>\n            ';
+ if (newUgradesAmountDue> 0) { 
+__p+='\n                <p>\n                    <span>\n                        '+
+((__t=( newSubscrName ))==null?'':__t)+
+' <span data-l10n-id="upgrade"></span>\n                    </span>: <span class="newUgradesAmountDue">\n                        ';
+ if (newUgradesAmountDue != null) { 
+__p+='\n                            '+
+((__t=( Number(newUgradesAmountDue).toFixed(2) ))==null?'':__t)+
+'\n                        ';
+ } 
+__p+='\n                    </span> USD\n                </p>\n            ';
+ } 
+__p+='\n            ';
+ if (existingUpgradesAmountDue> 0) { 
+__p+='\n                <p>\n                    <span data-l10n-id="existing_pro_upgrades"></span> <span>('+
+((__t=( existingUpgrades ))==null?'':__t)+
+')</span>:\n                    <span class="existingUpgradesAmountDue">\n                        ';
+ if (existingUpgradesAmountDue != null) { 
+__p+='\n                            '+
+((__t=( Number(existingUpgradesAmountDue).toFixed(2) ))==null?'':__t)+
+'\n                        ';
+ } 
+__p+='\n                    </span> USD\n                </p>\n            ';
+ } 
+__p+='\n            ';
+ if (taxDue> 0) { 
+__p+='\n                <p>\n                    <span>\n                        ';
+ if(countryCode === 'US') { 
+__p+='\n                            Tax\n                        ';
+ } else { 
+__p+='\n                            VAT\n                        ';
+ } 
+__p+='\n                            ('+
+((__t=(taxRate))==null?'':__t)+
+'%): '+
+((__t=( taxDue ))==null?'':__t)+
+' USD\n                    </span>\n                </p>\n                <p class="tax-exemption-instructions" data-l10n-id="tax_exemption_instructions">\n    \n                </p>\n            ';
+ } 
+__p+='\n            ';
+ if (couponDiscount) { 
+__p+='\n                <p>\n                    <span data-l10n-id="coupon_discount"></span> <span>: -'+
+((__t=(
+                            couponDiscount ))==null?'':__t)+
+' USD</span>\n                </p>\n            ';
+ } 
+__p+='\n            <div class="total-amount">\n                <div>\n                    <span data-l10n-id="total"></span>:\n                    ';
+ if (customerCurrency !== 'USD') { 
+__p+='\n                        ';
+ if (totalAmountDue != null) { 
+__p+='\n                            '+
+((__t=( Number(totalAmountDue).toFixed(2) ))==null?'':__t)+
+' USD\n                        ';
+ } 
+__p+='\n                    ';
+ } 
+__p+='\n                </div>\n                <div class="total-amount_value">\n                    <span class="totalAmountDue">\n                        ';
+ if (totalAmountCustomerCurrency != null) { 
+__p+='\n                            '+
+((__t=( Number(totalAmountCustomerCurrency).toFixed(2) ))==null?'':__t)+
+'\n                        ';
+ } 
+__p+='\n                    </span> '+
+((__t=( customerCurrency ))==null?'':__t)+
+'\n                </div>\n            </div>\n            ';
+ if (customerCurrency !== 'USD') { 
+__p+='\n                <br>\n                <p>\n                    <small data-l10n-id="displaying_price_in_local_currency"></small>\n                </p>\n            ';
+ } 
+__p+='\n        </form>\n    </div>\n    <div class="payment-processing" id="paymentProcessing" style="display: none">\n        <div class="processing-header" data-l10n-id="payment_processing"></div>\n        <div class="processing-desc" data-l10n-id="payment_wait"></div>\n        <div class="processing-spinner"></div>\n    </div>\n</div>\n<!-- make payment button new card -->\n<div class="form-group col-md-12 payments-buttons-panel" id="payment-form-buttons">\n    <button id="submitPayment" type="" class="submitPayment btn-payment-primary btn btn-block"\n        data-l10n-id="pay">\n    </button>\n    <button type="button" id="payment-back" data-l10n-id="';
+ if (upgrade || renewal) { 
+__p+=' Cancel ';
+ } else { 
+__p+=' Back  ';
+ } 
+__p+='" class="account-button btn btn-block"></button>\n</div>\n<!-- end make payment button new card -->\n<div class="form-group col-md-12" id="saved-card-buttons">\n    ';
+ if (paymentDetails) { 
+__p+='\n        <!--  make payment button -->\n        <button id="submitPaymentSaved" type="button" class="submitPayment btn-payment-primary btn btn-block"\n            data-l10n-id="pay" ';
+ if (cardExpired) { 
+__p+=' disabled ';
+ } 
+__p+='></button>\n        <button type="button" id="payment-back-saved" data-l10n-id="';
+ if (upgrade || renewal) { 
+__p+=' Cancel ';
+ } else { 
+__p+=' Back  ';
+ } 
+__p+='"\n            class="account-button btn btn-block"></button>\n        <!-- end make payment button -->\n    ';
+ } 
+__p+='\n</div>';
+}
+return __p;
+};
+this["tpl"]["payment-success"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="paymentSuccess col-md-12">\n    <div class="text-center">\n        <img src="/static/images/payment/Upgraded.png"/>\n    </div>\n    <div class="upgrade-success text-center">\n        ';
+ if (newSubscrTypeId === 2) { 
+__p+='\n        <span data-l10n-id="wl_pro_upgrade_added"></span>\n        ';
+ } else if (newSubscrTypeId === 3) { 
+__p+='\n        <span data-l10n-id="wl_pro_plus_upgrade_added"></span>\n        ';
+ } 
+__p+='\n    </div>\n    <div class="margin-top">\n        ';
+ if (trialMode) { 
+__p+='\n        <div class="" id="success-trial-mode">\n            <p data-l10n-id="success_add_pro_trial">\n            </p>\n            ';
+ if (isMobile) { 
+__p+='\n                <p data-l10n-id="contact_prior_to_trial_expiration_mobile"></p>\n                <br>\n                ';
+ if (newSubscrTypeId === 2) { 
+__p+='\n                    <p data-l10n-id="features_released_app_pro">\n                    </p>\n                ';
+ } else if (newSubscrTypeId === 3) { 
+__p+='\n                    <p data-l10n-id="features_released_app_pro_plus">\n                    </p>\n                ';
+ } 
+__p+='\n            ';
+ } else { 
+__p+='\n                <p>\n                    <span data-l10n-id="please"></span>\n                    <a class="contact-link" href="mailto:wlnetwork@weatherlink.com" data-l10n-id="contact"></a>\n                    <span data-l10n-id="contact_prior_to_trial_expiration"></span>\n                </p>\n                <div class="contact-info">\n                    <br>\n                    <div>\n                        <span data-l10n-id="customer_support_number"></span>: 800-678-3669 / 1-510-732-9229\n                    </div>\n                    <div>\n                        <span data-l10n-id="email"></span> Support@davisinstruments.com\n                    </div>\n                </div>\n            ';
+ } 
+__p+='\n        </div>\n        ';
+ } else { 
+__p+='\n        <div class="" id="success-no-trial-mode">\n            ';
+ if (newSubscrTypeId === 2) { 
+__p+='\n            <p data-l10n-id="success_upgrade_to_pro">\n            </p>\n            ';
+ } else if (newSubscrTypeId === 3) { 
+__p+='\n            <p data-l10n-id="success_upgrade_to_pro_plus">\n            </p>\n            ';
+ } 
+__p+='\n            ';
+ if (isMobile) { 
+__p+='\n                <p data-l10n-id="contact_prior_to_subscription_expiration_mobile"></p>\n                <br>\n                ';
+ if (newSubscrTypeId === 2) { 
+__p+='\n                    <p data-l10n-id="features_released_app_pro">\n                    </p>\n                ';
+ } else if (newSubscrTypeId === 3) { 
+__p+='\n                    <p data-l10n-id="features_released_app_pro_plus">\n                    </p>\n                ';
+ } 
+__p+='\n            ';
+ } else { 
+__p+='\n                <p>\n                    <span data-l10n-id="please"></span>\n                    <a class="contact-link" href="mailto:wlnetwork@weatherlink.com" data-l10n-id="contact"></a>\n                    <span data-l10n-id="contact_prior_to_subscription_expiration"></span>\n                </p>\n                <div class="contact-info">\n                    <div>\n                        <span data-l10n-id="customer_support_number"></span>: 800-678-3669 / 1-510-732-9229\n                    </div>\n                    <div>\n                        <span data-l10n-id="email"></span> Support@davisinstruments.com\n                    </div>\n                </div>\n            ';
+ } 
+__p+='\n        </div>\n        ';
+ } 
+__p+='\n    </div>\n</div>\n<div class="success-btn-container col-md-12">\n    <a id="gotIt" type="button" class="btn btn-done" data-l10n-id="got_it"></a>\n</div>\n';
+}
+return __p;
+};
+this["tpl"]["purchase-or-use-upgrade"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="payment-form-wrapper large-btn-block">\n    <div class="col-md-12 header-row padding-top">\n        <div class="payment-form-header">\n            <span class="payment-form-title" data-l10n-id="payment_details_no_colon"></span>\n        </div>\n    </div>\n\n    <!-- mobile info section start -->\n\n    <div class="row payment-info--mobile col-md-12">\n        <div class="payment-info-header--mobile centered" data-l10n-id="upgrade_available"></div>\n    </div>\n    <!-- mobile info section end -->\n    <div class="payment-form">\n        <br>\n        <div class="col-md-12" data-l10n-id="upgrade_available_use_or_purchase">\n        </div>\n    </div>\n    <div class="payment-error" id="paymentError"></div>\n</div>\n\n<!-- continue purchase button -->\n<div class="form-group purchase-or-use-btn-block col-md-12">\n    <button id="purchaseUpgrade" type="button"\n            class="btn-payment-primary btn btn-block" data-l10n-id="purchase_upgrade">\n    </button>\n    <button id="useUpgrade" type="button"\n            class="btn-payment-primary btn btn-block" data-l10n-id="use_upgrade">\n    </button>\n    <button type="button" id="cancel" data-l10n-id="Cancel"\n            class="account-button btn btn-block"></button>\n</div>';
+}
+return __p;
+};
+this["tpl"]["renewal-success"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="paymentSuccess col-md-12">\n    <div class="text-center">\n        <img src="/static/images/payment/Upgraded.png"/>\n    </div>\n    <div class="upgrade-success text-center">\n        <span data-l10n-id="subscription_renewed"></span>\n    </div>\n    <div class="margin-top">\n        <p>\n            <span data-l10n-id="please"></span>\n            <a class="contact-link" href="mailto:wlnetwork@weatherlink.com" data-l10n-id="contact"></a>\n            <span data-l10n-id="contact_prior_to_subscription_expiration"></span>\n        </p>\n        <div class="contact-info">\n            <div>\n                <span data-l10n-id="customer_support_number"></span>: 800-678-3669 / 1-510-732-9229\n            </div>\n            <div>\n                <span data-l10n-id="email"></span> Support@davisinstruments.com\n            </div>\n        </div>\n    </div>\n</div>\n<div class="success-btn-container col-md-12">\n    <a id="gotIt" type="button" class="btn btn-done" data-l10n-id="got_it"></a>\n</div>\n';
+}
+return __p;
+};
+this["tpl"]["requirePro"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="container-fluid">\n  <div class="row">\n    <div class="col-md-12 payment-info-header text-center">\n      <div class="text-center">\n      ';
+ if (pageAccessed == 'charts' || pageAccessed == "stripcharts") { 
+__p+='\n        ';
+ if (subscrType == 1) { 
+__p+='\n          Upgrade to <span class="payment-primary">WeatherLink Pro</span> to view charts\n        ';
+ } 
+__p+='\n      ';
+ } 
+__p+='\n      ';
+ if (pageAccessed == 'data') { 
+__p+='\n        ';
+ if (subscrType == 1) { 
+__p+='\n          Upgrade to <span class="payment-primary">WeatherLink Pro</span> to view data\n        ';
+ } 
+__p+='\n      ';
+ } 
+__p+='\n    </div>\n      ';
+ if (!upgradeAllowed) { 
+__p+='\n        <div data-l10n-id="owner_managed_device" class="text-center"></div>\n      ';
+ } else if (subscrType != 1) { 
+__p+='\n        <div data-l10n-id="upgrade_device_for_access" class="text-center"></div>\n      ';
+ } 
+__p+='\n    </div>\n\n    <div class="margin-top col-md-12">\n        ';
+ if (subscrType == 1) { 
+__p+='\n              ';
+ if (pageAccessed == 'charts' || pageAccessed == 'stripcharts') { 
+__p+='\n                   <p data-l10n-id="chart_description"></p>\n              ';
+ } else if(pageAccessed == 'data') { 
+__p+='\n                   <p data-l10n-id="data_description"></p>\n              ';
+ } 
+__p+='\n        ';
+ } else if( upgradeAllowed ) { 
+__p+='\n              ';
+ if (subscrType == 2) { 
+__p+='\n                  ';
+ if (pageAccessed == 'charts' || pageAccessed == 'stripcharts') { 
+__p+='\n                    ';
+ if (upgradesAvailable )  { 
+__p+='\n                       <p data-l10n-id="upgrade_device_pro_for_charts" data-l10n-args=\'{ "numUpgrades": '+
+((__t=( upgradesAvailable ))==null?'':__t)+
+' }\'></p>\n                    ';
+ } 
+__p+='\n                     <p data-l10n-id="chart_description"></p>\n                  ';
+ } else if(pageAccessed == 'data') { 
+__p+='\n                    ';
+ if (upgradesAvailable )  { 
+__p+='\n                       <p data-l10n-id="upgrade_device_pro_for_data" data-l10n-args=\'{ "numUpgrades": '+
+((__t=( upgradesAvailable ))==null?'':__t)+
+' }\'></p>\n                    ';
+ } 
+__p+='\n                     <p data-l10n-id="data_description"></p>\n                  ';
+ } 
+__p+='\n\n              ';
+ } else if (subscrType == 3) { 
+__p+='\n                  ';
+ if (pageAccessed == 'charts' || pageAccessed == 'stripcharts') { 
+__p+='\n                    ';
+ if (upgradesAvailable )  { 
+__p+='\n                       <p data-l10n-id="upgrade_device_proPlus_for_charts" data-l10n-args=\'{ "numUpgrades": '+
+((__t=( upgradesAvailable ))==null?'':__t)+
+' }\'></p>\n                    ';
+ } 
+__p+='\n                     <p data-l10n-id="chart_description"></p>\n                  ';
+ } else if(pageAccessed == 'data') { 
+__p+='\n                    ';
+ if (upgradesAvailable )  { 
+__p+='\n                       <p data-l10n-id="upgrade_device_proPlus_for_data" data-l10n-args=\'{ "numUpgrades": '+
+((__t=( upgradesAvailable ))==null?'':__t)+
+' }\'></p>\n                    ';
+ } 
+__p+='\n                     <p data-l10n-id="data_description"></p>\n                  ';
+ } 
+__p+='\n              ';
+ } 
+__p+='\n        ';
+ } else { 
+__p+='\n                ';
+ if (pageAccessed == 'charts' || pageAccessed == 'stripcharts') { 
+__p+='\n                     <p data-l10n-id="basic_share_no_access_chart"></p>\n                     <p data-l10n-id="chart_description"></p>\n                ';
+ } else { 
+__p+='\n                     <p data-l10n-id="basic_share_no_access_data"></p>\n                     <p data-l10n-id="data_description"></p>\n                ';
+ } 
+__p+='\n        ';
+ } 
+__p+='\n    </div>\n\n\n      ';
+ if (subscrType == 1 )  { 
+__p+='\n        <div class="text-center">\n          <a class="compare-plans-link"\n             data-l10n-id="find_out_more_about_plans">\n          </a>\n        </div>\n        <div class="col-md-4 col-md-offset-4 margin-top text-center">\n            <a href="/accountSubscription#makePayment/'+
+((__t=( systemId ))==null?'':__t)+
+'/0/false/Pro"\n               type="button"\n               class="btn btn-get-weather-pro"\n               data-l10n-id="upgrade_to_pro">\n            </a>\n        </div>\n      ';
+ } else if (upgradesAvailable && upgradeAllowed) { 
+__p+='\n      <div class="col-md-4 col-md-offset-4 margin-top text-center">\n          <button id="upgradeDevice"\n                  type="button"\n                  name="button"\n                  class="btn btn-get-weather-pro"\n                  data-l10n-id="upgrade_device">\n          </button>\n      </div>\n      ';
+ } else { 
+__p+='\n        <div class="col-md-4 col-md-offset-4 margin-top text-center">\n            ';
+ if (subscrType == 2) { 
+__p+='\n                <a href="/accountSubscription#makePayment/'+
+((__t=( systemId ))==null?'':__t)+
+'/0/false/Pro"\n                   type="button"\n                   class="btn btn-get-weather-pro"\n                   data-l10n-id="upgrade_device">\n                </a>\n            ';
+ } else if (subscrType == 3) { 
+__p+='\n                <a href="/accountSubscription#makePayment/'+
+((__t=( systemId ))==null?'':__t)+
+'/0/false/ProPlus"\n                   type="button"\n                   class="btn btn-get-weather-pro"\n                   data-l10n-id="upgrade_device">\n                </a>\n            ';
+ } 
+__p+='\n        </div>\n      ';
+ } 
+__p+='\n  </div>\n</div>\n';
+}
+return __p;
+};
+this["tpl"]["reseller-associated"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="paymentSuccess col-md-12">\n    ';
+ if(company) { 
+__p+='\n    <div class="margin-top">\n        <p>\n            Upgrades are handled by '+
+((__t=( company.companyName ))==null?'':__t)+
+'. Contact them by sending an email to <strong>'+
+((__t=(
+            company.resellerEmail ))==null?'':__t)+
+'</strong>\n            ';
+ if(company.phoneNumber) { 
+__p+='\n            or by phone at <strong>'+
+((__t=( company.phoneNumber ))==null?'':__t)+
+'.</strong>\n            ';
+ } else { 
+__p+='\n            .\n            ';
+ } 
+__p+='\n        </p>\n        <p>\n            If you are unsure why you are receiving this message, or need to contact Davis Instruments for any reason,\n            we’ll\n            also be happy to help.\n        </p>\n        <p class="davis-info"> Customer Support Number: (800) 678-3669 </p>\n        <p class="davis-info"> Email: sales@davisinstruments.com </p>\n    </div>\n    ';
+ } 
+__p+='\n</div>\n<div class="success-btn-container col-md-12">\n    <a href="/bulletin" type="button" class="btn btn-done">\n        Got it\n    </a>\n</div>';
+}
+return __p;
+};
+this["tpl"]["restartPaymentFlow"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="payment-details-root-form-container">\n    <div id="main-region" class="form-section">\n        <div class="session-expired-wrapper">\n            <div class="session-expired-header" data-l10n-id="session_expired">\n            </div>\n            <div class="try-again-payment" data-l10n-id="try_again_payment"></div>\n        </div>\n        <!-- continue purchase button -->\n        <div class="form-group continue-purchase col-md-12">\n            <a href="/accountSubscription" id="restart-payments" type="button" class="btn-payment-primary btn btn-block"\n                    data-l10n-id="try_again">\n            </a>\n        </div>\n    </div>\n</div>';
+}
+return __p;
+};
+this["tpl"]["subscription-details"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<a href="" id="cancel-payment" class="cancel-payment">\n    <i class="wl-icon icon-close"></i>\n</a>\n<img class="dashboard-img-1 background-image" src="/static/images/payment/MBSubImage1.png">\n<img class="dashboard-img-2 background-image" src="/static/images/payment/MBSubImage2.png">\n<img class="triangle background-image"\n    src="https://anima-uploads.s3.amazonaws.com/591dc9e4aeb404000d2214a6/5a0f28a298a131000bea04aa/5a0f28a398a131000bea04ac/img/tier1upgradetriangle.png"\n    anima-src="https://anima-uploads.s3.amazonaws.com/591dc9e4aeb404000d2214a6/5a0f28a298a131000bea04aa/5a0f28a398a131000bea04ac/img/tier1upgradetriangle.png">\n<div class="info-section">\n    ';
+ if (existingUpgrades) { 
+__p+='\n        <div class="payment-info">\n            ';
+ if (renewal) { 
+__p+='\n                <p class="payment-info-header" data-l10n-id="renewal_wl_upgrades"></p>\n            ';
+ } else { 
+__p+='\n                <p class="payment-info-header" data-l10n-id="purchase_wl_upgrades"></p>\n            ';
+ } 
+__p+='\n        </div>\n        ';
+ } else { 
+__p+='\n            ';
+ if (trialMode) { 
+__p+='\n                <div class="payment-info" id="trial-mode">\n                    <p class="payment-info-header" data-l10n-id="one_wl_trial_upgrade"\n                        data-l10n-args=\'{ "newSubscrName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" }\'>\n                    </p>\n                    <p class="payment-info-text" data-l10n-id="free_for_30_days"></p>\n                    <p class="payment-info-text" data-l10n-id="after_30_days_charge" data-l10n-args=\'{"totalAmountDue": "'+
+((__t=( totalAmountDue ))==null?'':__t)+
+'",\n                "lengthInMonths": "'+
+((__t=( lengthInMonths ))==null?'':__t)+
+'", "subscrPricePerMonth": "'+
+((__t=( subscrPricePerMonth ))==null?'':__t)+
+'" }\'></p>\n                </div>\n                ';
+ } else { 
+__p+='\n                    <div class="payment-info" id="no-trial-mode">\n                        ';
+ if (proPlusUpgradeAmount && !subscrOnTrialPeriod) { 
+__p+='\n                            <p class="payment-info-header" data-l10n-id="purchase_of_one_wl_upgrade"\n                                data-l10n-args=\'{ "newSubscrName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" }\'>\n                            </p>\n                            ';
+ if (!showUpgradesDetected) { 
+__p+='\n                                <p class="payment-info-text" data-l10n-id="card_will_be_charged"\n                                    data-l10n-args=\'{"totalAmountDue": "'+
+((__t=( totalAmountDue ))==null?'':__t)+
+'",\n                            "lengthInMonths": "'+
+((__t=( lengthInMonths ))==null?'':__t)+
+'", "subscrPricePerMonth": "'+
+((__t=( subscrPricePerMonth ))==null?'':__t)+
+'" }\'></p>\n                                ';
+ } 
+__p+='\n                            ';
+ } else { 
+__p+='\n                                <p class="payment-info-header" data-l10n-id="purchase_of_one_wl_upgrade"\n                                    data-l10n-args=\'{ "newSubscrName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" }\'>\n                                </p>\n                                ';
+ if (!showUpgradesDetected) { 
+__p+='\n                                    <div class="" id="paymentMessage">\n                                        <p class="payment-info-text" data-l10n-id="card_will_be_charged"\n                                            data-l10n-args=\'{"totalAmountDue": "'+
+((__t=( totalAmountDue ))==null?'':__t)+
+'",\n                    "lengthInMonths": "'+
+((__t=( lengthInMonths ))==null?'':__t)+
+'", "subscrPricePerMonth": "'+
+((__t=( subscrPricePerMonth ))==null?'':__t)+
+'",\n                    "subscriptionName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" ,"taxLabel": "'+
+((__t=(taxLabelInDesc))==null?'':__t)+
+'"}\'>\n                                        </p>\n                                    </div>\n                                ';
+ } 
+__p+='\n                            ';
+ } 
+__p+='\n                    </div>\n                    ';
+ } 
+__p+='\n                ';
+ } 
+__p+='\n\n                ';
+ if (totalAmountDue || totalAmountCustomerCurrency) { 
+__p+='\n                    <div class="total-info">\n                        <div class="total-info-header">\n                            <span data-l10n-id="total"></span>\n                            <!-- temp remove tax label -->\n                            ';
+ if (beforeTax) { 
+__p+='(<span data-l10n-id="before_tax"></span>)';
+ } 
+__p+='\n                        </div>\n                        <div class="payment-info-total">\n                        ';
+ if (totalAmountCustomerCurrency != null) { 
+__p+='\n                            '+
+((__t=( Number(totalAmountCustomerCurrency).toFixed(2) ))==null?'':__t)+
+' '+
+((__t=( customerCurrency ))==null?'':__t)+
+'\n                        ';
+ } else if (totalAmountDue != null) { 
+__p+='\n                            '+
+((__t=( Number(totalAmountDue).toFixed(2) ))==null?'':__t)+
+' USD\n                        ';
+ } 
+__p+='\n                        </div>\n                    </div>\n                    ';
+ } 
+__p+='\n</div>';
+}
+return __p;
+};
+this["tpl"]["subscription-plans-select"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="payment-form-wrapper">\n    <div class="col-md-12 header-row padding-top">\n        <div class="payment-form-header">\n            <span class="payment-form-title" data-l10n-id="upgrade_your_station"></span>\n        </div>\n    </div>\n    <div class="col-md-12 plans-select-desc" data-l10n-id="subscription_select_desc">\n    </div>\n    <div class="payment-form" style="margin-bottom: 22px;">\n        <div class="col-md-12 plans-duration-group">\n            ';
+ _.each(subscriptionTerms, function(term, i) { 
+__p+='\n            <div>\n                <input type="radio" id="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'"\n                       value="'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'"\n                       class="subscriptionTerm" name="subscriptionTerm"\n                       data-length="'+
+((__t=( term.lengthInMonths ))==null?'':__t)+
+'"\n                       data-price="'+
+((__t=( term.price ))==null?'':__t)+
+'"\n                ';
+ if (currentSubscrLengthInMonths == 36 && term.lengthInMonths == 12) { 
+__p+=' disabled ';
+ } 
+__p+='\n                ';
+ if (term.lengthInMonths == lengthInMonths) { 
+__p+=' checked ';
+ } 
+__p+='>\n                <label for="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'">\n                    ';
+ if (term.lengthInMonths == 12) { 
+__p+='\n                        <span data-l10n-id="year_1_plan"></span>\n                    ';
+ } else if (term.lengthInMonths == 36) { 
+__p+='\n                        <span data-l10n-id="year_3_plan"></span>&nbsp;\n                        (<span data-l10n-id="amount_off" data-l10n-args=\'{"amount": "15%"}\'></span>)\n                    ';
+ } 
+__p+='\n                </label>\n            </div>\n            ';
+ }); 
+__p+='\n        </div>\n\n        <div class="subscription-type-radio-group col-md-12">\n            <div>\n                <input type="radio" id="pro"\n                       name="newSubscrType"\n                       data-name="Pro"\n                       value="2" ';
+ if(newSubscrTypeId == 2) { 
+__p+=' checked="checked" ';
+ } 
+__p+='\n                        ';
+ if (userSubscriptionTypeId === 3) { 
+__p+=' disabled ';
+ } 
+__p+='\n                >\n                <label for="pro">\n                    <span class="label-item-header">\n                        <span class="left-item">\n                            <span class="check"></span>\n                            <span class="subscription-name" data-l10n-id="pro"></span>\n                        </span>\n                        ';
+ _.each(subscriptionTypes, function(type, i) { 
+__p+='\n                            ';
+ if (type.userSubscriptionTypeId == 2) { 
+__p+='\n                            <span style="position: relative">\n                                $'+
+((__t=( (_.find(type.subscriptionTerms, {lengthInMonths: lengthInMonths}).price/lengthInMonths).toFixed(2) ))==null?'':__t)+
+' / mo\n                                ';
+ if (lengthInMonths == 36) { 
+__p+='\n                                    <span class="discount-label" data-l10n-id="amount_off" data-l10n-args=\'{"amount": "15%"}\'></span>\n                                ';
+ } 
+__p+='\n                            </span>\n                        ';
+ } 
+__p+='\n                        ';
+ }); 
+__p+='\n                    </span>\n                    <span class="label-item-desc" data-l10n-id="wl_pro_desc"></span>\n                    ';
+ if (userSubscriptionTypeId == 1) { 
+__p+='\n                        <a href="#makePayment/'+
+((__t=( upgradeSystemId ))==null?'':__t)+
+'/'+
+((__t=( newArchivalRate ))==null?'':__t)+
+'/true/Pro" class="get-trial-link" data-l10n-id="get_wl_pro_free_trial"></a>\n                    ';
+ } 
+__p+='\n                </label>\n            </div>\n            <div>\n                <input type="radio" id="proplus"\n                       name="newSubscrType"\n                       data-name="Pro+"\n                       value="3" ';
+ if(newSubscrTypeId == 3) { 
+__p+=' checked="checked" ';
+ } 
+__p+='>\n                <label for="proplus">\n                    <span class="label-item-header">\n                        <span>\n                            <span class="check"></span>\n                            <span class="subscription-name" data-l10n-id="pro"></span>+\n                        </span>\n                        ';
+ _.each(subscriptionTypes, function(type, i) { 
+__p+='\n                            ';
+ if (type.userSubscriptionTypeId == 3 ) { 
+__p+='\n                            <span style="position: relative">\n                                $'+
+((__t=( (_.find(type.subscriptionTerms, {lengthInMonths: lengthInMonths}).price/lengthInMonths).toFixed(2) ))==null?'':__t)+
+' / mo\n                            </span>\n                            ';
+ } 
+__p+='\n                        ';
+ }); 
+__p+='\n                    </span>\n                    <span class="label-item-desc" data-l10n-id="wl_pro_plus_desc"></span>\n                </label>\n            </div>\n        </div>\n        <a class="comparison-chart-link" data-l10n-id="comparison_chart_link"></a>\n    </div>\n</div>\n\n<!-- continue purchase button -->\n<div class="form-group continue-purchase subscription-plans-btns col-md-12">\n    <button id="goToPayments" type="button"\n            class="btn-payment-primary btn-block btn-green payment-btn-large"\n            ';
+ if (newSubscrTypeId == 2) { 
+__p+='\n                data-l10n-id="upgrade_to_pro">\n            ';
+ } else if (newSubscrTypeId == 3){ 
+__p+='\n                data-l10n-id="upgrade_to_pro_plus">\n            ';
+ } 
+__p+='>\n    </button>\n    ';
+ if (userSubscriptionTypeId == 1) { 
+__p+='\n        <a href="#tryWeatherLinkPro/'+
+((__t=( upgradeSystemId ))==null?'':__t)+
+'/'+
+((__t=( newArchivalRate ))==null?'':__t)+
+'" id="goToTryWlPro"\n                class="btn-payment-primary btn-block btn-white payment-btn-large"\n                data-l10n-id="use_basic">\n        </a>\n    ';
+ } 
+__p+='\n</div>';
+}
+return __p;
+};
+this["tpl"]["subscriptionIntro"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="landing-background container-fluid">\n    <div class="root-form-container margin-top">\n        <div class="col-md-12">\n            <div class="row subscription-info-container">\n                <div class="subscription-intro-header col-md-12" data-l10n-id="unlock_potential_weather_station"></div>\n                <div class="subscription-intro-subheader col-md-12" data-l10n-id="wl_is_home_for_ws_data">\n                </div>\n                <table class="subscription-plans-table" width="100%">\n                    <thead>\n                    <tr>\n                        <th></th>\n                        <th>\n                            <div class="plan-name" style="font-size: 16px;text-transform: uppercase" data-l10n-id="basic"></div>\n                            <div style="margin-bottom: 25px;"><span class="price">0</span> USD/<span data-l10n-id="Month"></span></div>\n                            <a href="/bulletin" class="subscr-link" data-l10n-id="get_started"></a>\n                        </th>\n                        <th style="width: 260px;">\n                            <div class="plans-wrapper">\n                                <div class="one-year-plan">\n                                    <div class="plan-name" data-l10n-id="pro" style="text-transform: uppercase"></div>\n                                    <div class="year-label">\n                                        <span data-l10n-id="year_1_plan"></span>\n                                        <span class="discount-label"></span>\n                                    </div>\n                                    <div><span class="price price-small">3.95</span> USD/<span data-l10n-id="Month"></span></div>\n                                    <div class="per-device-label" data-l10n-id="per_device"></div>\n                                    <a href="#makePayment/'+
+((__t=( systemId ))==null?'':__t)+
+'/0/false/Pro/1/12"\n                                       type="button" class="btn btn-get-weather-pro subscr-intro-btn" data-l10n-id="purchase">\n                                    </a>\n                                </div>\n                                <div class="three-year-plan">\n                                    <div class="plan-name" data-l10n-id="pro" style="text-transform: uppercase"></div>\n                                    <div class="year-label">\n                                        <span data-l10n-id="year_3_plan"></span>\n                                        <span class="discount-label"><span data-l10n-id="save"></span> 15%</span>\n                                    </div>\n                                    <div><span class="price price-small">3.35</span> USD/<span data-l10n-id="Month"></span></div>\n                                    <div class="per-device-label" data-l10n-id="per_device"></div>\n                                    <a href="#makePayment/'+
+((__t=( systemId ))==null?'':__t)+
+'/0/false/Pro/1/36" type="button"\n                                       class="btn btn-get-weather-pro subscr-intro-btn" data-l10n-id="purchase">\n                                    </a>\n                                </div>\n                            </div>\n                        </th>\n                        <th style="width: 260px;">\n                            <div class="plans-wrapper">\n                                <div class="one-year-plan">\n                                    <div class="plan-name" data-l10n-id="pro_plus" style="text-transform: uppercase"></div>\n                                    <div class="year-label">\n                                        <span data-l10n-id="year_1_plan"></span>\n                                        <span class="discount-label"></span>\n                                    </div>\n                                    <div><span class="price price-small">8.95</span> USD/<span data-l10n-id="Month"></span></div>\n                                    <div class="per-device-label" data-l10n-id="per_device"></div>\n                                    <a href="#makePayment/'+
+((__t=( systemId ))==null?'':__t)+
+'/0/false/ProPlus/1/12" type="button"\n                                       class="btn btn-get-weather-pro subscr-intro-btn" data-l10n-id="purchase">\n                                    </a>\n                                </div>\n                                <div class="three-year-plan">\n                                    <div class="plan-name" data-l10n-id="pro_plus" style="text-transform: uppercase"></div>\n                                    <div class="year-label">\n                                        <span data-l10n-id="year_3_plan"></span>\n                                        <span class="discount-label"><span data-l10n-id="save"></span> 15%</span>\n                                    </div>\n                                    <div><span class="price price-small">7.65</span> USD/<span data-l10n-id="Month"></span></div>\n                                    <div class="per-device-label" data-l10n-id="per_device"></div>\n                                    <a href="#makePayment/'+
+((__t=( systemId ))==null?'':__t)+
+'/0/false/ProPlus/1/36" type="button"\n                                       class="btn btn-get-weather-pro subscr-intro-btn" data-l10n-id="purchase">\n                                    </a>\n                                </div>\n                            </div>\n                        </th>\n                        <th>\n                            <div class="plan-name" style="font-size: 16px;text-transform: uppercase" data-l10n-id="custom_plan"></div>\n                            <div class="subscription-intro-contact">\n                                <div><strong data-l10n-id="contact_us_at"></strong></div>\n                                <div>\n                                    <span>(800) 678-3669</span>\n                                </div>\n                                <div>\n                                    <span>Sales@davisinstruments.com</span>\n                                </div>\n                            </div>\n                        </th>\n                    </tr>\n                    </thead>\n                    <tbody>\n                        <tr>\n                            <td data-l10n-id="current_conditions"></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                        </tr>\n                        <tr>\n                            <td>\n                                <span data-l10n-id="historical_data"></span>\n                                <i class="wl-icon icon-faq" data-toggle="tooltip" data-container=".subscription-info-container"\n                                   id="historical-data-tooltip"\n                                   data-html="true" data-placement="right" title="">\n                                </i>\n                            </td>\n                            <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                        </tr>\n                        <tr>\n                            <td>\n                                <span data-l10n-id="try_pro_features_bulletin"></span>\n                                <i class="wl-icon icon-faq" data-toggle="tooltip" data-container=".subscription-info-container"\n                                   id="bulletin-tooltip"\n                                   data-html="true" data-placement="right" title="">\n                                </i>\n                            </td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                        </tr>\n                        <tr>\n                            <td>\n                                <span data-l10n-id="try_pro_features_map"></span>\n                                <i class="wl-icon icon-faq" data-toggle="tooltip" data-container=".subscription-info-container"\n                                   id="map-tooltip"\n                                   data-html="true" data-placement="right" title="">\n                                </i>\n                            </td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                        </tr>\n                        <tr>\n                            <td>\n                                <span data-l10n-id="try_pro_features_chart"></span>\n                                <i class="wl-icon icon-faq" data-toggle="tooltip" data-container=".subscription-info-container"\n                                   id="chart-tooltip"\n                                   data-html="true" data-placement="right" title="">\n                                </i>\n                            </td>\n                            <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                        </tr>\n                        <tr>\n                            <td>\n                                <span data-l10n-id="try_pro_features_data"></span>\n                                <i class="wl-icon icon-faq" data-toggle="tooltip" data-container=".subscription-info-container"\n                                   id="data-tooltip"\n                                   data-html="true" data-placement="right" title="">\n                                </i>\n                            </td>\n                            <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                        </tr>\n                        <tr>\n                            <td>\n                                <span data-l10n-id="try_pro_features_mobilize"></span>\n                                <i class="wl-icon icon-faq" data-toggle="tooltip" data-container=".subscription-info-container"\n                                   id="mobilize-tooltip"\n                                   data-html="true" data-placement="right" title="">\n                                </i>\n                            </td>\n                            <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                        </tr>\n                        <tr>\n                            <td>IPM\n                                <i class="wl-icon icon-faq" data-toggle="tooltip" data-container=".subscription-info-container"\n                                   id="ipm-tooltip"\n                                   data-html="true" data-placement="right" title="">\n                                </i>\n                            </td>\n                            <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                            <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                            <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                            <td data-l10n-id="custom" style="text-transform: uppercase"></td>\n                        </tr>\n                        <tr>\n                            <td>\n                                <span data-l10n-id="pro_shares"></span>\n                                <i class="wl-icon icon-faq" data-toggle="tooltip" data-container=".subscription-info-container"\n                                   id="pro-shares-tooltip"\n                                   data-html="true" data-placement="right" title="">\n                                </i>\n                            </td>\n                            <td>0</td>\n                            <td>6</td>\n                            <td>10</td>\n                            <td data-l10n-id="custom" style="text-transform: uppercase"></td>\n                        </tr>\n                        <tr>\n                            <td>\n                                <span data-l10n-id="third_party_intervals"></span>\n                                <i class="wl-icon icon-faq" data-toggle="tooltip" data-container=".subscription-info-container"\n                                   id="third-party-intervals-tooltip"\n                                   data-html="true" data-placement="right" title="">\n                                </i>\n                            </td>\n                            <td>15 <span data-l10n-id="minutes"></span></td>\n                            <td>\n                                <div>5 <span data-l10n-id="minutes"></span></div>\n                                <div style="margin-top: 20px;">\n                                    <a href="#makePayment/'+
+((__t=( systemId ))==null?'':__t)+
+'/0/true/Pro"\n                                       class="subscr-link" data-l10n-id="start_30_day_trial"></a>\n                                </div>\n                            </td>\n                            <td data-l10n-id="up_to_1_minute"></td>\n                            <td data-l10n-id="up_to_1_minute"></td>\n                        </tr>\n                    </tbody>\n                </table>\n            </div>\n        </div>\n    </div>\n</div>\n';
+}
+return __p;
+};
+this["tpl"]["tryWeatherLink"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="landing-background container-fluid">\n    <div class="root-form-container margin-top">\n        <div class="col-md-12">\n            <div class="row subscription-info-container">\n                <div class="subscription-intro-header col-md-12" data-l10n-id="try_pro_welcome"></div>\n                <div class="subscription-info col-md-12">\n                    <p data-l10n-id="try_pro_description">\n                    </p>\n                </div>\n                <div class="comparison-boxes col-md-12">\n                    <div class="comparison-box comparison-box-features col-md-3 no-padding">\n                        <div class="box-header" data-l10n-id="try_pro_features_column_header">\n                        </div>\n                        <div class="box-content">\n                            <table class="feature-table feature-name-column">\n                                <tr>\n                                    <td class="cell" data-l10n-id="try_pro_features_curr_conditions"></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell" data-l10n-id="try_pro_features_historical_data"></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell" data-l10n-id="try_pro_features_bulletin"></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell" data-l10n-id="try_pro_features_map"></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell" data-l10n-id="try_pro_features_chart"></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell" data-l10n-id="try_pro_features_data"></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell" data-l10n-id="try_pro_features_mobilize"></td>\n                                </tr>\n                                <tr>\n                                <tr>\n                                    <td>Station Upgrades</td>\n                                </tr>\n                                <tr>\n                                    <td>Pro Shares</td>\n                                </tr>\n                                <td class="cell" data-l10n-id="try_pro_features_pricing"></td>\n                                </tr>\n                                </tr>\n                            </table>\n                        </div>\n                    </div>\n                    <div class="comparison-box comparison-box-basic col-md-3 no-padding">\n                        <div class="box-header" data-l10n-id="weatherlink_basic">\n                        </div>\n                        <div class="box-content">\n                            <table class="feature-table wl-basic-table">\n                                <tr>\n                                    <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                                </tr>\n                                <tr>\n                                    <td class="cell not-available"><i class="unchk-icon wl-icon icon-close"></i></td>\n                                </tr>\n                                <tr>\n                                    <td class="text-cell">0</td>\n                                </tr>\n                                <tr>\n                                    <td class="text-cell">0</td>\n                                </tr>\n                                <tr>\n                                    <td class="text-cell">Free</td>\n                                </tr>\n                            </table>\n                        </div>\n                    </div>\n                    <div class="comparison-box comparison-box-pro col-md-3 no-padding">\n                        <div class="pro-box-container">\n                            <div class="box-header" data-l10n-id="weatherlink_pro">\n                            </div>\n                            <div class="box-content">\n                                <table class="feature-table wl-pro-table">\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="text-cell">3</td>\n                                    </tr>\n                                    <tr>\n                                        <td class="text-cell">6</td>\n                                    </tr>\n                                    <tr>\n                                        <td class="text-cell">3.95 USD/ mo</td>\n                                    </tr>\n                                    <tr>\n                                        <td>\n                                            <a href="#makePayment/'+
+((__t=( upgradeSystemId ))==null?'':__t)+
+'/'+
+((__t=( newArchivalRate ))==null?'':__t)+
+'/true/Pro" type="button"\n                                               data-l10n-id="try_pro_try"\n                                               class="btn btn-get-weather-pro subscr-intro-btn">\n                                            </a>\n                                        </td>\n                                    </tr>\n                                </table>\n                            </div>\n                        </div>\n                    </div>\n\n                    <div class="comparison-box comparison-box-pro-plus col-md-3 no-padding">\n                        <div class="pro-box-container">\n                            <div class="box-header">\n                                WeatherLink Pro+\n                            </div>\n                            <div class="box-content">\n                                <table class="feature-table wl-pro-table">\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="cell available"><i class="chk-icon wl-icon icon-radiofill"></i></td>\n                                    </tr>\n                                    <tr>\n                                        <td class="text-cell">10</td>\n                                    </tr>\n                                    <tr>\n                                        <td class="text-cell">10</td>\n                                    </tr>\n                                    <tr>\n                                        <td class="text-cell">7.95 USD / mo</td>\n                                    </tr>\n                                    <tr>\n                                        <td>\n                                            <a href="#makePayment/'+
+((__t=( upgradeSystemId ))==null?'':__t)+
+'/'+
+((__t=( newArchivalRate ))==null?'':__t)+
+'/true/ProPlus" type="button"\n                                               data-l10n-id="try_pro_try"\n                                               class="btn btn-get-weather-pro subscr-intro-btn">\n                                            </a>\n                                        </td>\n                                    </tr>\n                                </table>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n            <div class="button-container">\n                <a href="#makePayment/'+
+((__t=( upgradeSystemId ))==null?'':__t)+
+'/'+
+((__t=( newArchivalRate ))==null?'':__t)+
+'/true/Pro" id="tryWlMobile"\n                   data-l10n-id="try_pro_wl"\n                   class="btn-payment-primary btn-block btn-green payment-btn-large">\n                </a>\n                <a href="/bulletin"\n                   data-l10n-id="try_pro_no_thanks"\n                   class="btn-payment-primary btn-block btn-white payment-btn-large">\n                </a>\n                <!--\n                <a href="#makePayment?t=true" type="button"\n                data-l10n-id="try_pro_try"\n                class="btn btn-get-weather-pro payment-btn try-pro-button">\n                </a>\n                -->\n                <div class="row">\n                </div>\n                <br>\n            </div>\n        </div>\n    </div>\n</div>\n';
+}
+return __p;
+};
+this["tpl"]["upgrades-detected"] = function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='<div class="payment-form-wrapper">\n    <div class="col-md-12 header-row padding-top">\n        <div class="payment-form-header">\n            <span class="payment-form-title" data-l10n-id="payment_details_no_colon"></span>\n        </div>\n    </div>\n\n    <!-- mobile info section start -->\n    ';
+ if (trialMode) { 
+__p+='\n        <div class="row payment-info--mobile col-md-12" id="trial-mode-mobile">\n            <div class="payment-info-header--mobile"\n                 data-l10n-id="one_wl_trial_upgrade"\n                 data-l10n-args=\'{ "newSubscrName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" }\'></div>\n            <div class="payment-info-text" data-l10n-id="free_for_30_days"></div>\n        </div>\n    ';
+ } else { 
+__p+='\n        <div class="row payment-info--mobile col-md-12" id="no-trial-mode-mobile">\n            ';
+ if (existingUpgrades) { 
+__p+='\n                <div class="payment-info-header--mobile" data-l10n-id="purchase_wl_upgrades"></div>\n            ';
+ } else { 
+__p+='\n            <div class="payment-info-header--mobile"\n                 data-l10n-id="purchase_of_one_wl_upgrade"\n                 data-l10n-args=\'{ "newSubscrName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" }\'>\n            </div>\n            ';
+ } 
+__p+='\n            ';
+ if (!showUpgradesDetected) { 
+__p+='\n                <div class="payment-amount-header--mobile">\n                    <span class="total-info-header--mobile" data-l10n-id="total"></span>:\n                    <span class="payment-info-total--mobile">\n                        <span id="amountDueMobile">'+
+((__t=( totalAmountDue))==null?'':__t)+
+'</span> USD\n                        <!-- temp remove tax label -->\n                        <!--$<span id="amountDueMobile">'+
+((__t=( totalAmountDue))==null?'':__t)+
+' + <span data-l10n-id="tax"></span></span>-->\n                    </span>\n                </div>\n            ';
+ } 
+__p+='\n        </div>\n    ';
+ } 
+__p+='\n    <!-- mobile info section end -->\n\n    <div class="payment-form">\n        <!-- different switch style for mobile flow -->\n        ';
+ if (window.matchMedia("(max-width: 992px)").matches) { 
+__p+='\n        <div class="col-md-12 plans-duration-group">\n            ';
+ _.each(subscriptionTerms, function(term, i) { 
+__p+='\n            <div>\n                <input type="radio" id="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'"\n                       value="'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'"\n                       class="subscriptionTerm" name="subscriptionTerm"\n                       data-length="'+
+((__t=( term.lengthInMonths ))==null?'':__t)+
+'"\n                       data-price="'+
+((__t=( term.price ))==null?'':__t)+
+'"\n                ';
+ if (currentSubscrLengthInMonths == 36 && term.lengthInMonths == 12) { 
+__p+=' disabled ';
+ } 
+__p+='\n                ';
+ if (term.lengthInMonths == lengthInMonths) { 
+__p+=' checked ';
+ } 
+__p+='>\n                <label for="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'">\n                    ';
+ if (term.lengthInMonths == 12) { 
+__p+='\n                    <span data-l10n-id="year_1_plan"></span>\n                    ';
+ } else if (term.lengthInMonths == 36) { 
+__p+='\n                    <span data-l10n-id="year_3_plan"></span>&nbsp;\n                     (<span data-l10n-id="amount_off" data-l10n-args=\'{"amount": "15%"}\'></span>)\n                    ';
+ } 
+__p+='\n                </label>\n            </div>\n            ';
+ }); 
+__p+='\n        </div>\n        ';
+ } else { 
+__p+='\n        <div class="subscription-length payment-checkbox-group">\n            <div class="col-md-4 col-xs-12 subscription-length-label" data-l10n-id="subscription_length"></div>\n            <div class="col-md-8 col-xs-12" style="margin-bottom: 10px;">\n                <ul>\n                    ';
+ _.each(subscriptionTerms, function(term, i) { 
+__p+='\n                    <li class="col-md-6 col-xs-6">\n                        <input type="radio" id="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'"\n                               value="'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'"\n                               class="subscriptionTerm" name="subscriptionTerm"\n                               data-length="'+
+((__t=( term.lengthInMonths ))==null?'':__t)+
+'"\n                        ';
+ if (currentSubscrLengthInMonths == 36 && term.lengthInMonths == 12) { 
+__p+=' disabled ';
+ } 
+__p+='\n                        ';
+ if (term.lengthInMonths == lengthInMonths) { 
+__p+=' checked ';
+ } 
+__p+='>\n                        <label for="term_'+
+((__t=( term.iUserSubscriptionTermId ))==null?'':__t)+
+'">'+
+((__t=( getTermTranslationKey(term.name) ))==null?'':__t)+
+'</label>\n                        <div class="check"></div>\n                    </li>\n                    ';
+ }); 
+__p+='\n                </ul>\n            </div>\n            <div class="divider row"></div>\n        </div>\n        ';
+ } 
+__p+='\n    </div>\n    <div class="existing-upgrades col-md-12 col-xs-12">\n        ';
+ if(upgradeType === 'TERM_1YR_TO_3YRS') { 
+__p+='\n            <p class="detected-upgrades-desc" data-l10n-id="upgrades_detected_1_to_3_year"\n               data-l10n-args=\'{ "subscrName" : "'+
+((__t=( userSubscriptionTypeName ))==null?'':__t)+
+'",\n                "newSubscrName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" }\'>\n            </p>\n        ';
+ } else if (upgradeType === 'KEEP_EXISTING_END_DATE') { 
+__p+='\n            <p class="detected-upgrades-desc" style="position: relative">\n                <span data-l10n-id="upgrades_detected_keep_date"\n                      data-l10n-args=\'{ "subscrName" : "'+
+((__t=( userSubscriptionTypeName ))==null?'':__t)+
+'",\n                    "expDate" : "'+
+((__t=( expDate ))==null?'':__t)+
+'" }\'></span>\n                ';
+ if(lengthInMonths == 12) { 
+__p+='\n                <i class="wl-icon icon-faq" id="1_year_pro_tooltip" data-toggle="tooltip"\n                   data-container="body" data-html="true" data-placement="bottom" title=""\n                   data-original-title=""></i>\n                ';
+ } else { 
+__p+='\n                <i class="wl-icon icon-faq" id="3_year_pro_tooltip" data-toggle="tooltip"\n                   data-container="body" data-html="true" data-placement="bottom" title=""\n                   data-original-title=""></i>\n                ';
+ } 
+__p+='\n            </p>\n        ';
+ } else if (upgradeType === 'EXTEND_END_DATE') { 
+__p+='\n            <p class="detected-upgrades-desc" style="position: relative">\n                <span data-l10n-id="upgrades_detected_extend_date"\n                data-l10n-args=\'{ "subscrName" : "'+
+((__t=( userSubscriptionTypeName ))==null?'':__t)+
+'",\n                "expDate" : "'+
+((__t=( expDate ))==null?'':__t)+
+'" }\'></span>\n                ';
+ if(lengthInMonths == 12) { 
+__p+='\n                <i class="wl-icon icon-faq" id="1_year_pro_tooltip" data-toggle="tooltip"\n                   data-container="body" data-html="true" data-placement="bottom" title=""\n                   data-original-title=""></i>\n                ';
+ } else { 
+__p+='\n                <i class="wl-icon icon-faq" id="3_year_pro_tooltip" data-toggle="tooltip"\n                   data-container="body" data-html="true" data-placement="bottom" title=""\n                   data-original-title=""></i>\n                ';
+ } 
+__p+='\n            </p>\n        ';
+ } else if (upgradeType === 'PRO_TO_PROPLUS') { 
+__p+='\n            <p class="detected-upgrades-desc" data-l10n-id="upgrades_detected_amount"\n               data-l10n-args=\'{ "numUpgrades" : "'+
+((__t=( existingUpgrades ))==null?'':__t)+
+'" }\'>\n            </p>\n        ';
+ } else if (upgradeType === 'TRIAL_TO_PRO' || upgradeType === 'TRIAL_TO_PROPLUS') { 
+__p+='\n            <p class="detected-upgrades-desc" data-l10n-id="upgrades_detected_trial"\n               data-l10n-args=\'{ "subscrName" : "'+
+((__t=( userSubscriptionTypeName ))==null?'':__t)+
+'",\n                "newSubscrName": "'+
+((__t=( newSubscrName ))==null?'':__t)+
+'" }\'>\n            </p>\n        ';
+ } 
+__p+='\n        ';
+ if (newUgradesAmountDue > 0) { 
+__p+='\n        <p>\n            <span>'+
+((__t=( newSubscrName ))==null?'':__t)+
+' <span data-l10n-id="upgrade"></span></span>:\n            ';
+ if (newUpgradesAdjustmentAmount > 0) { 
+__p+='\n                '+
+((__t=( (Number(newUgradesAmountDue) + Number(newUpgradesAdjustmentAmount)).toFixed(2) ))==null?'':__t)+
+' USD\n            ';
+ } else { 
+__p+='\n                '+
+((__t=( newUgradesAmountDue ))==null?'':__t)+
+' USD\n            ';
+ } 
+__p+='\n        </p>\n        ';
+ } 
+__p+='\n        ';
+ if (newUpgradesAdjustmentAmount > 0 && newUgradesAmountDue > 0) { 
+__p+='\n            <p>\n                <span data-l10n-id="expiration_date_adjustment"></span>: -'+
+((__t=( newUpgradesAdjustmentAmount ))==null?'':__t)+
+' USD\n            </p>\n        ';
+ } 
+__p+='\n        ';
+ if (existingUpgradesAmountDue > 0) { 
+__p+='\n        <p>\n            <span data-l10n-id="existing_pro_upgrades"></span> <span>('+
+((__t=( existingUpgrades ))==null?'':__t)+
+')</span>:\n            '+
+((__t=( existingUpgradesAmountDue ))==null?'':__t)+
+' USD\n        </p>\n        ';
+ } 
+__p+='\n        <div class="total-amount">\n            <div>\n                <span data-l10n-id="total"></span>\n                <!-- temp remove tax label -->\n                <!--<span data-l10n-id="total_before_tax"></span>-->\n            </div>\n            <div class="total-amount_value">\n                '+
+((__t=( totalAmountDue))==null?'':__t)+
+' USD\n            </div>\n        </div>\n    </div>\n</div>\n\n<!-- continue purchase button -->\n<div class="form-group continue-purchase col-md-12">\n    <button id="continuePurchase" type="button"\n            class="btn-payment-primary btn btn-block" data-l10n-id="continue_purchase">\n    </button>\n    <!--\n    <button type="button" id="payment-back" data-l10n-id="Back"\n            class="account-button btn btn-block"></button>\n            -->\n</div>\n';
+}
+return __p;
+};

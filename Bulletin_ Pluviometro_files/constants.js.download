@@ -1,0 +1,122 @@
+var wl = wl || {};
+
+var imgUrl = 'https://s3.amazonaws.com/static.weatherlink.com/images/map';
+
+wl.mapConstants = {
+	imgUrl: imgUrl,
+	oMapOptionsDefault: {
+		center: new google.maps.LatLng(0, 0),
+		zoom: 2,
+		streetViewControl: false,
+		mapTypeId: google.maps.MapTypeId.TERRAIN
+	},
+	tempScale: {
+		scaleF: [-10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+		scaleC: [-23, -18, -12, -7, 0, 5, 10, 15, 21, 27, 32, 37, 38]
+	},
+
+	tempScaleColors: [
+		'#29333b', '#535f79', '#2f6695', '#1b7dbf', '#4090b1', '#27a5af', '#00b58d', '#009247', '#fdd03b', '#ed9922', '#dd5626', '#c53c28', '#89282b'
+	]
+	,
+	mapDivId: 'map-container',
+	sMapStationsURL: '/map/data',
+	sMapPersistOverlayURL: '/map/persistOverlay',
+	sMapAqsDataURL: '/map/data/aqs',
+	sMapAqsScaleURL: '/map/aqScales',
+	sStationsDetailURL: '/map/data/station/',
+	temperatureDashValue: 32767.0,
+	iconSwitchZoomLevel: 9,
+	nearbyStationsRadius: 20,
+	mcOptions:
+	{
+		gridSize: 60,
+		maxZoom: 9,
+		minimumClusterSize: 50,
+		styles: [{
+			url: imgUrl + '/Temp/-1_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/0_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/1_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/2_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/3_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/4_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/5_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/6_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/7_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/8_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/9_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/10_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/11_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}, {
+			url: imgUrl + '/Temp/12_lg.png',
+			height: 54,
+			width: 54,
+			textSize: 18,
+			textColor: '#FFFFFF'
+		}]
+	}
+};

@@ -1,0 +1,1755 @@
+/**
+ * Created by anton.milko on 12-Jul-21.
+ */
+
+var wl = wl || {};
+
+wl.app.module('oAddVcFlow', function (oAddVcFlow, oDeviceApp, Backbone,
+  Marionette, $, _) {
+
+  var lat = 37.63675;
+  var lng = -122.12608;
+
+  var vcTooltipTranslationKeys = ['vc_did_tooltip', 'vc_key_tooltip'];
+
+  var mapOptions = {
+    zoom: 5,
+    minZoom: 3,
+    mapTypeId: google.maps.MapTypeId.TERRAIN,
+    streetViewControl: false,
+    disableDoubleClickZoom: true,
+    draggableCursor: 'default',
+    mapTypeControlOptions: {
+      position: google.maps.ControlPosition.RIGHT_BOTTOM
+    },
+    zoomControlOptions: {
+      position: google.maps.ControlPosition.RIGHT_CENTER
+    }
+  };
+
+  var VcActivateModel = Backbone.Model.extend({
+    defaults: {
+      mobile: false,
+      stationName: '',
+      stationUse: 1,
+      systemId: null,
+      sDid: '',
+      key: '',
+      activationCode: '',
+      lat: null,
+      lng: null,
+      yearlyRainToDate: '',
+      seaLevelBarometer: '',
+      yearlyRainSeasonStart: 1,
+      ianaTimeZone: 'America/Los_Angeles',
+      countryCode: '',
+      elevation: '',
+      privacy: 1,
+      transceiverId: 1,
+      weatherStationId: 0,
+      transceiverType: 2,
+      rainCollectorType: 2,
+      billToCompany: false,
+      resellerName: null,
+      resellerEmail: null,
+      deviceType: 'VC',
+      isCompanyDevice: false,
+      isCompanyUser: false,
+      servicePlans: null,
+      selectedServicePlan: null,
+      subscriptionTermId: null,
+      trialMode: false,
+      existingUpgrades: null,
+      newSubscrName: null,
+      couponCode: null,
+      totalAmountDue: null,
+      subscriptionTerms: [],
+      cardholderName: null,
+      cardNumber: null,
+      expiration: null,
+      cvc: null,
+      countryName: null,
+      useSavedCard: true,
+      beforeTax: false,
+      taxDue: 0,
+      taxRate: 0,
+      validatedAddresses: [],
+      selectedAddressIndex: 0,
+      orderId: null,
+      stripeToken: null,
+      //paymentDetails
+      paymentDetails: null,
+      countryId: null,
+      address1: null,
+      address2: null,
+      city: null,
+      state: null,
+      zipCode: null,
+      //skip payment form
+      payLaterProfile: {
+        address: {}
+      },
+      reactivateDevice: false,
+      reactivationFeeDetail: null,
+      activeServicePlan: null,
+      errorCode: null,
+      errorMsg: null,
+      renewalDate: null,
+      customerCurrency: 'USD',
+      totalAmountCustomerCurrency: null,
+      stripePaymentMethodId: null,
+      standalone: true
+    }
+  });
+
+  this.VcInstallFlow = Marionette.LayoutView.extend({
+    template: _.template('<div><div id="header"></div><div id="body"></div><div id="footer"></div></div>'),
+    regions: {
+      header: '#header',
+      body: '#body',
+      footer: '#footer'
+    },
+    childEvents: {
+      'layout:render': function () {
+        this.triggerMethod('layout:render');
+      },
+      'vcSettings:render': function (obj, data) {
+        this.renderVcSettings(obj, data);
+      },
+      'vcSettingsErrorView:render': function (obj, data) {
+        this.renderVcSettingsErrorView(obj, data);
+      },
+      'vcActivate:render': function (view, data) {
+        this.renderVcActivationForm(view, data);
+      },
+      'plans:render': function (view, data) {
+        this.renderVcPlans(view, data);
+      },
+      'agreementVcPass:render': function (view, data) {
+        this.renderAgreementNextStep(data);
+      },
+      'activateSuccess:render': function (view, data) {
+        this.renderVcSuccess(data);
+      },
+      'upgradeToProPlus:render': function (view, data) {
+        this.renderUpgradeToProPlus(data);
+      },
+      'serviceAgreement:render': function (view, data) {
+        this.renderServiceAgreement(view, data);
+      },
+      'installDevice:render': function (view, data) {
+        this.renderInstallDevice(view, data);
+      },
+      'billingAddressForm:render': function (view, data) {
+        this.renderBillingAddressForm(view, data);
+      },
+      'paymentForm:render': function (view, data) {
+        this.renderPaymentForm(view, data);
+      },
+      'skipPayment:render': function (view, data) {
+        this.renderSkipPayment(view, data);
+      },
+      'skipPaymentConfirm:render': function (view, data) {
+        this.renderSkipPaymentConfirm(view, data);
+      },
+      'servicePlanConfirm:render': function (view, data) {
+        this.renderServicePlanConfirm(view, data);
+      },
+      'external:confirm-address:render': function (view, data) {
+        this.renderConfirmAddress(view, data);
+      },
+      'modalContent:setHeight': function () {
+        _.defer(function () {
+          //this.setHeight();
+        }.bind(this));
+      }
+    },
+    initialize: function (options) {
+      console.log(options);
+      this.getStripePublisherKey();
+    },
+    onBeforeShow: function () {
+      this.renderVcActivationForm();
+    },
+    getStripePublisherKey: function () {
+      $.ajax({
+        type: "GET",
+        url: "/accountSubscription/paymentKey",
+        success: function (response) {
+          wl.stripePublisherKey = response.data;
+        },
+        error: function (err) {
+          console.error('failed to get stripe key')
+        }
+      });
+    },
+    renderVcActivationForm: function (e, data) {
+      this.$el.removeClass('centered');
+      this.showChildView('body', new VcActivationFormView({
+        model: new VcActivateModel(data)
+      }));
+      this.showChildView('header', new VcActivationHeaderView());
+      if (data) {
+        this.body.$el.find('#submit').prop('disabled', false)
+      }
+    },
+    renderVcSettings: function (obj, data) {
+      this.showChildView('body', new VcSettingsFormView({
+        model: new VcActivateModel(data)
+      }));
+      this.showChildView('header', new VcSettingsHeaderView({
+        model: new VcActivateModel(data)
+      }));
+      this.header.$el.find('.header-title, .header-desc').show();
+    },
+    renderVcPlans: function (obj, data) {
+      this.showChildView('body', new oAddVcFlow.VcPlansBodyView({
+        model: new VcActivateModel(data)
+      }));
+      this.showChildView('header', new oAddVcFlow.VcPlansHeaderView({
+        model: new VcActivateModel(data)
+      }));
+    },
+    renderVcSuccess: function (data) {
+      this.showChildView('body', new VcActivateSuccessView({
+        model: new wl.app.oAddDevice.VcSuccessModel(data)
+      }));
+      this.header.$el.find('.header-title, .header-desc').hide();
+    },
+    renderUpgradeToProPlus: function (data) {
+      this.showChildView('body', new oAddVcFlow.UpgradeToProPlusLayoutView({
+        model: new wl.app.oAddDevice.VcSuccessModel(data)
+      }));
+    },
+    renderServiceAgreement: function (obj, data) {
+      this.showChildView('body', new wl.app.oAddDevice.ServiceAgreementView(data));
+      this.showChildView('header', new wl.app.oAddDevice.ServiceAgreementHeaderView());
+    },
+    renderInstallDevice: function (obj, data) {
+      this.showChildView('body', new InstallDeviceView({
+        model: new VcActivateModel(data)
+      }));
+      this.showChildView('header', new InstallDeviceHeaderView({
+        model: new VcActivateModel(data)
+      }));
+    },
+    renderBillingAddressForm: function (obj, data) {
+      this.showChildView('body', new oAddVcFlow.BillingAddressFormBodyView({
+        model: new VcActivateModel(data)
+      }));
+      this.showChildView('header', new PaymentFormHeaderView({
+        model: new Backbone.Model({
+          activationCode: data.activationCode
+        })
+      }));
+    },
+    renderConfirmAddress: function (obj, data) {
+      this.showChildView('body', new oAddVcFlow.ConfirmAddressBodyView({
+        model: new VcActivateModel(data)
+      }));
+      this.showChildView('header', new ConfirmAddressHeaderView());
+    },
+    renderPaymentForm: function (obj, data) {
+      this.showChildView('body', new oAddVcFlow.PaymentFormBodyView({
+        model: new VcActivateModel(data)
+      }));
+      this.showChildView('header', new PaymentFormHeaderView({
+        model: new Backbone.Model({
+          activationCode: data.activationCode
+        })
+      }));
+    },
+    renderAgreementNextStep: function (data) {
+      if (data.activeServicePlan) {
+        this.renderActiveServicePlan(null, data);
+        return;
+      }
+      if (data.activationCode) {
+        if (data.billToCompany) {
+          this.renderServicePlanConfirm(null, data); //reseller
+        } else {
+          this.renderBillingAddressForm(null, data); //end user
+        }
+      } else {
+        this.renderVcPlans(null, data);
+      }
+    },
+    renderSkipPayment: function (obj, data) {
+      this.showChildView('body', new oAddVcFlow.SkipPaymentBodyView({
+        model: new VcActivateModel(data)
+      }));
+      this.showChildView('header', new SkipPaymentHeaderView());
+      this.header.$el.find('.header-title, .header-desc').show();
+    },
+    renderSkipPaymentConfirm: function (obj, data) {
+      this.showChildView('body', new oAddVcFlow.SkipPaymentConfirmBodyView({
+        model: new VcActivateModel(data)
+      }));
+      this.header.$el.find('.header-title, .header-desc').hide();
+    },
+    renderServicePlanConfirm: function (obj, data) {
+      this.showChildView('body', new oAddVcFlow.ConfirmServicePlanBodyView({
+        model: new VcActivateModel(data)
+      }));
+      this.showChildView('header', new ConfirmServicePlanHeaderView());
+    },
+    renderActiveServicePlan: function (obj, data) {
+      this.showChildView('body', new oAddVcFlow.ActiveServicePlanBodyView({
+        model: new VcActivateModel(data)
+      }));
+      this.header.$el.find('.header-title, .header-desc').hide();
+    },
+    renderVcSettingsErrorView: function (obj, data) {
+      this.header.$el.find('.header-title, .header-desc').hide();
+
+      this.showChildView('body', new vcSettingsErrorView({
+        model: new VcActivateModel(data)
+      }));
+    }
+  });
+
+  var VcActivationHeaderView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.vcActivationFormHeader
+  });
+
+  var VcActivationFormView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.vcActivationForm,
+    ui: {
+      'purchaseLink': '.purchase-link',
+      'back': '#back',
+      'submit': '#submit',
+      'form': '.vcActivationForm',
+      'stationUsage': '#station_usage',
+      'vc_did_tooltip': '#did-tooltip',
+      'vc_key_tooltip': '#key-tooltip',
+      'device_id': '#device_id'
+    },
+    events: {
+      'click @ui.purchaseLink': 'onClickLink',
+      'click @ui.submit': 'onSubmit',
+      'keyup input': 'handleSubmitAvailability',
+      'blur input': 'handleSubmitAvailability',
+      'paste input': 'handleSubmitAvailability',
+      'keyup @ui.device_id': 'toUpperCase',
+      'blur @ui.device_id': 'toUpperCase',
+      'paste @ui.device_id': 'toUpperCase',
+      'selectmenuopen @ui.form select': 'updateScroll'
+    },
+    triggers: {
+      'click @ui.back': 'layout:render'
+    },
+    onRender: function () {
+      //define validator
+      this.vcValidator = FORM_VALIDATOR.activateVCDevice(this.ui.form);
+
+      //init selectmenu
+      this.ui.form.find('select').selectmenu({
+        icons: {
+          button: "wl-icon icon-caretdown"
+        },
+        classes: {
+          "ui-selectmenu-menu": "addDevice",
+          "ui-selectmenu-button": "addDevice"
+        }
+      });
+      $('.addDevice .ui-widget-content').perfectScrollbar({
+        suppressScrollX: true
+      });
+      $('.addDevice .ui-widget-content').scroll(function () {
+        this.updateScroll();
+      }.bind(this));
+
+      setTimeout(function () {
+        this.ui.form.find('select').selectmenu("refresh");
+      }.bind(this));
+
+      $.fn.tooltip = $.fn.tooltip.noConflict();
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+      });
+      this.setTooltipTitles();
+    },
+    onShow: function () {
+      this.triggerMethod('modalContent:setHeight');
+    },
+    toUpperCase: function (e) {
+      e.target.value = e.target.value.toUpperCase();
+    },
+    updateScroll: function () {
+      $('.addDevice .ui-widget-content').perfectScrollbar(
+        'update');
+    },
+    setTooltipTitles: function () {
+      var self = this;
+      var promises = [];
+      _.each(vcTooltipTranslationKeys, function (key) {
+        var prom = document.l10n.formatValue(key);
+        promises.push(prom);
+      });
+      Promise.all(promises).then(function (values) {
+        _.forEach(values, function (value, i) {
+          if (self.ui[vcTooltipTranslationKeys[i]]) {
+            self.ui[vcTooltipTranslationKeys[i]].attr(
+              'title',
+              '<div class="add-device-tooltip">' +
+              values[i] +
+              '</div>');
+            self.ui[vcTooltipTranslationKeys[i]].tooltip();
+          }
+        });
+      });
+    },
+    handleSubmitAvailability: function () {
+      var validFields = 0;
+      var arr = this.ui.form.serializeArray();
+      arr = arr.filter(function (elem) {
+        return elem.name !== "activationCode" // optional field
+      });
+      this.ui.submit.prop('disabled', 'disabled');
+      _.forEach(arr, function (obj) {
+        if (obj.value !== "") {
+          validFields++;
+        }
+      });
+      if (arr.length === validFields) {
+        if (this.vcValidator.errorList.length === 0) {
+          this.ui.submit.prop('disabled', false);
+        }
+      }
+    },
+    onSubmit: function () {
+      var self = this;
+      //validate form and show next view
+      var bValidForm = this.vcValidator.form();
+      var bValidId = this.vcValidator.element(this.ui.form.find(
+        'input[name="sDid"]'));
+      var dataArray = this.ui.form.serializeArray();
+      _.forEach(dataArray, function (obj) {
+        self.model.set(obj.name, obj.value);
+      });
+      if (bValidForm && bValidId) {
+        this.triggerMethod('installDevice:render', this.model.attributes);
+      }
+    }
+  });
+
+  var VcSettingsHeaderView = Marionette.ItemView.extend({
+    template: _.template(
+      '<div class="header-icon"><i class="wl-icon icon-close"></i></div>' +
+      '<div class="header-title title-sm"><%= stationName %> <span data-l10n-id="location"></span></div>' +
+      '<div class="header-desc map-margin" data-l10n-id="click_to_select_location"></div>'
+    )
+  });
+
+  var VcSettingsFormView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.vcSettingsForm,
+    ui: {
+      'form': '.vcSettingsForm',
+      'back': '#back',
+      'submit': '#submit',
+      'coords': '#coord-block',
+      'lat': '#latitude',
+      'lng': '#longitude',
+      'timeZone': '#timeZone',
+      'country': '#country',
+      'address': '#modal-address',
+      'hintBar': '.hint-bar',
+      'loading': '.loading:not(".loading-error")',
+      'loadingErr': '.loading-error',
+      'loadingIcon': '.loading-icon',
+      'optionsBlock': '#options-block',
+      'geosort': 'i.icon-geosort',
+      'searchIcon': 'i.icon-search',
+      'clearIcon': '.clear-input',
+      'retryBtn': '.retry-btn',
+      'setManualBtn': '.set-manual-btn',
+      'seasonList': '#yearlyRainSeasonStart',
+      'privacy': '#privacy',
+      'elevation': '#elevation',
+      'wl_network_tooltip': '#network-tooltip',
+      'errorBlock': '.error-block'
+    },
+    events: {
+      'click @ui.submit': 'onSubmit',
+      "click @ui.clearIcon": "clearInput",
+      "click @ui.geosort, click @ui.retryBtn": "findUserLocation",
+      "click @ui.retryBtn": "findUserLocation",
+      "click @ui.setManualBtn": "setManually",
+      "input @ui.address": "handleSearchIcon",
+      "change @ui.address": "handleSearchIcon",
+      "click @ui.back": "returnBack",
+      'selectmenuopen @ui.form select': 'updateScroll',
+      'scroll .ui-menu.ui-widget-content': 'updateScroll'
+    },
+    templateHelpers: function () {
+      var userAccountSetting = wl.data.userAccountSetting || wl.bootstrap
+        .userAccountSettings;
+      return {
+        rainUnit: Utils.getAccountRainEtUnit(userAccountSetting.unitsRainEtTypeId),
+        elevUnit: Utils.getAccountElevUnit(userAccountSetting.unitsElevTypeId),
+        barUnit: Utils.getAccountBarUnit(userAccountSetting.unitsBarTypeId)
+      }
+    },
+    initialize: function () {
+      this.lat = this.model.get('lat');
+      this.lng = this.model.get('lng');
+    },
+    onRender: function () {
+      //define validator
+      this.vcValidator = FORM_VALIDATOR.activateVCDevice(this.ui.form);
+
+      $('#modal-config').css('z-index', 999);
+      //init selectmenu
+      this.ui.form.find('select:not("#country")').selectmenu({
+        icons: {
+          button: "wl-icon icon-caretdown"
+        },
+        classes: {
+          "ui-selectmenu-menu": "addDevice",
+          "ui-selectmenu-button": "addDevice"
+        }
+      });
+      this.ui.country.selectmenu({
+        icons: {
+          button: "wl-icon icon-caretdown"
+        },
+        classes: {
+          "ui-selectmenu-menu": "addDevice country",
+          "ui-selectmenu-button": "addDevice country"
+        }
+      });
+      $('.addDevice .ui-widget-content').perfectScrollbar({
+        suppressScrollX: true
+      });
+      $('.addDevice .ui-widget-content').scroll(function () {
+        this.updateScroll();
+      }.bind(this));
+
+      //this.populateTimeZoneList();
+      this.populateCountriesList();
+      setTimeout(function () {
+        this.ui.seasonList.selectmenu("refresh");
+        this.ui.privacy.selectmenu("refresh");
+      }.bind(this));
+
+      $.fn.tooltip = $.fn.tooltip.noConflict();
+      this.setTooltipTitle();
+    },
+    setTooltipTitle: function () {
+      var self = this;
+      document.l10n.formatValue('network_tooltip').then(function (value) {
+        self.ui.wl_network_tooltip.attr('title',
+          '<div class="add-device-tooltip">' + value +
+          '</div>'
+        );
+        self.ui.wl_network_tooltip.tooltip();
+      })
+    },
+    updateScroll: function () {
+      $('.ui-selectmenu-menu .ui-widget-content').perfectScrollbar(
+        'update');
+    },
+    onShow: function () {
+      var self = this;
+
+      if (this.lat && this.lng) {
+        mapOptions.center = new google.maps.LatLng(this.lat, this.lng);
+      } else { //default usa
+        mapOptions.center = new google.maps.LatLng(lat, lng);
+      }
+
+      oGMap = new google.maps.Map(document.getElementById(
+        'modal-map-container'), mapOptions);
+      var searchInput = document.getElementById('modal-address');
+      var coordBlock = document.getElementById('coord-block');
+      oGMap.controls[google.maps.ControlPosition.TOP_LEFT].push(
+        searchInput);
+      oGMap.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(
+        coordBlock);
+
+      wl.app.oAddDevice.initializeAutoComplete(oGMap, this.ui);
+
+      if (this.lat && this.lng) {
+        wl.app.oAddDevice.setLatLng(this.lat, this.lng, true, false, this.ui);
+      }
+      google.maps.event.addListener(oGMap, 'click', function (
+        event) {
+        wl.app.oAddDevice.setLatLng(event.latLng.lat(), event.latLng.lng(),
+          true,
+          false, self.ui);
+      });
+
+      this.triggerMethod('modalContent:setHeight');
+    },
+    // populateTimeZoneList: function () {
+    //   var selectEl = this.ui.timeZone;
+    //   _.forEach(moment.tz.names(), function (tz) {
+    //     selectEl.append('<option>' + tz + '</option>')
+    //   });
+    // },
+    populateCountriesList: function () {
+      var selectEl = this.ui.country;
+      $.ajax({
+        url: '/iris/countries',
+        success: function (response) {
+          _.forEach(response, function (country) {
+            selectEl.append('<option data-code="' +
+              country
+                .iso2Code + '" value="' + country.iso2Code +
+              '">' + country.countryName +
+              '</option>')
+          });
+          selectEl.selectmenu('refresh');
+        }
+      })
+    },
+    findUserLocation: function () {
+      var self = this;
+      document.l10n.formatValue('searching').then(function (value) {
+        self.ui.address.val(value);
+      });
+      this.ui.loadingErr.hide();
+      this.ui.loading.show();
+      this.ui.searchIcon.hide();
+      this.ui.clearIcon.hide();
+      this.ui.hintBar.hide();
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+          var pos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+
+          oGMap.setCenter(pos);
+          var latLng = new google.maps.LatLng(pos.lat, pos.lng);
+          wl.app.oAddDevice.setLatLng(latLng.lat(), latLng.lng(), true, false,
+            self.ui);
+          wl.app.oAddDevice.setElevation(self.ui.elevation, latLng.lat(),
+            latLng.lng());
+          self.ui.optionsBlock.hide();
+          self.ui.loading.hide();
+        }, function () {
+          handleLocationError(true);
+        });
+      } else {
+        // Browser doesn't support Geolocation
+        handleLocationError(false);
+      }
+
+      function handleLocationError(browserHasGeolocation) {
+        document.l10n.formatValue('unable_to_locate').then(
+          function (value) {
+            self.ui.address.val(value);
+          });
+        self.ui.loadingErr.show();
+        self.ui.loading.hide();
+        self.ui.optionsBlock.show();
+        if (!browserHasGeolocation) {
+          console.error("browser doesn't support geolocation.");
+        }
+      }
+    },
+    setManually: function () {
+      this.ui.address.val("");
+      this.ui.loadingErr.hide();
+      this.ui.searchIcon.show();
+      this.ui.optionsBlock.hide();
+      this.ui.hintBar.fadeIn(500);
+    },
+    handleSearchIcon: function (e) {
+      this.ui.loadingErr.hide();
+      if ($(e.target).val() === "") {
+        this.ui.clearIcon.hide();
+        this.ui.searchIcon.show();
+      } else {
+        this.ui.clearIcon.show();
+        this.ui.searchIcon.hide();
+      }
+    },
+    clearInput: function () {
+      this.ui.address.val("");
+      this.ui.address.trigger('change');
+    },
+    returnBack: function () {
+      var self = this;
+      _.forEach(this.ui.form.serializeArray(), function (obj) {
+        self.model.set(obj.name, obj.value);
+      });
+      this.triggerMethod('installDevice:render', this.model.attributes);
+    },
+    getRegistrationInfo: function () {
+      var self = this;
+      var d = $.Deferred();
+      $.ajax({
+        url: '/iris/registrationInfo?did=' + self.model.get('sDid') +
+          '&countryId=' + self.model.get('countryId') +
+          '&activationCode=' + self.model.get('activationCode'),
+        type: 'GET',
+        success: function (response) {
+          d.resolve(response);
+        },
+        error: function (err) {
+          d.reject(err);
+        }
+      });
+      return d.promise();
+    },
+    submitVCDevice: function () {
+      var d = $.Deferred();
+
+      $.ajax({
+        url: '/iris/putVCOnCart',
+        data: {
+          'sDid': this.model.get('sDid'),
+          'key': this.model.get('key'),
+          'activationCode': this.model.get('activationCode'),
+          'seaLevelBarometer': this.model.get('seaLevelBarometer'),
+          'yearlyRainToDate': this.model.get('yearlyRainToDate'),
+          'transceiverType': this.model.get('transceiverType'),
+          'transceiverId': this.model.get('transceiverId'),
+          'ianaTimeZone': this.model.get('ianaTimeZone'),
+          'lat': this.model.get('lat'),
+          'lng': this.model.get('lng'),
+          'elevation': this.model.get('elevation'),
+          'stationName': this.model.get('stationName'),
+          'privacy': this.model.get('privacy'),
+          'stationUse': this.model.get('stationUse'),
+          'weatherStationId': this.model.get('weatherStationId'),
+          'rainCollectorType': this.model.get('rainCollectorType'),
+          'yearlyRainSeasonStart': this.model.get('yearlyRainSeasonStart'),
+        },
+        type: 'POST',
+        success: function (response) {
+          d.resolve(response);
+        },
+        error: function (err) {
+          d.reject(err);
+        }
+      });
+      return d.promise();
+    },
+    onSubmit: function () {
+      this.ui.errorBlock.text('');
+      var dataArray = this.ui.form.serializeArray();
+      _.forEach(dataArray, function (obj) {
+        this.model.set(obj.name, obj.value);
+      }.bind(this));
+      var bValid = this.vcValidator.form();
+      if (bValid) {
+        this.ui.loadingIcon.show();
+        this.ui.submit.prop('disabled', 'disabled');
+        this.submitVCDevice().then(function (res) {
+          this.ui.loadingIcon.hide();
+          this.ui.submit.prop('disabled', false);
+          if (res.data) {
+            this.model.set('orderId', res.data.orderId);
+            this.model.set('countryId', res.data.countryId);
+            this.handleSuccessDeviceInfoResponse();
+          } else {
+            var errorCode = res.error.errorCode;
+            if (errorCode === 2 || errorCode === 5) {
+              this.model.set('errorCode', res.error.errorCode);
+              this.model.set('errorMsg', res.error.errorMessage);
+              this.triggerMethod('vcSettingsErrorView:render', this.model.attributes);
+            } else {
+              this.ui.errorBlock.text(res.error.errorMessage);
+            }
+          }
+        }.bind(this),
+          function (err) {
+            console.log(err.responseText);
+            this.ui.errorBlock.text(err.responseText);
+            this.ui.loadingIcon.hide();
+            this.ui.submit.prop('disabled', false);
+          }.bind(this));
+      }
+    },
+    handleSuccessDeviceInfoResponse: function () {
+      this.ui.loadingIcon.show();
+      this.ui.submit.prop('disabled', 'disabled');
+      this.getRegistrationInfo().then(
+        function (res) {
+          if (res.data) {
+            this.model.set('billToCompany', res.data.billToCompany);
+            this.model.set('servicePlans', res.data.servicePlans);
+            if (res.data.billToCompany) {
+              this.model.set('resellerName', res.data.resellerName);
+              if (res.data.resellerName) {
+                var escaped = res.data.resellerName.replace("'", '&#39;');
+                this.model.set('resellerName', escaped);
+              }
+              this.model.set('resellerEmail', res.data.resellerEmail);
+            }
+            if (res.data.activeServicePlan) {
+              this.model.set('activeServicePlan', res.data.activeServicePlan);
+            }
+            if (this.model.get('activationCode')) {
+              this.setSubscriptionTerm();
+            } else {
+              this.triggerMethod('serviceAgreement:render', this.model.attributes);
+            }
+          } else {
+            oAddVcFlow.stopProcessing(this.ui, res.error.errorMessage || res.err.statusText);
+          }
+        }.bind(this),
+        function (err) {
+          oAddVcFlow.stopProcessing(this.ui, err.statusText);
+        }.bind(this));
+    },
+    setSubscriptionTerm: function () {
+      var self = this;
+      this.ui.loadingIcon.show();
+      this.ui.submit.prop('disabled', 'disabled');
+      this.ui.errorBlock.text('');
+      if (!this.model.get('selectedServicePlan')) {
+        this.model.set('selectedServicePlan', this.model.get('servicePlans')[0]);
+        this.model.set('subscriptionTermId', this.model.get('selectedServicePlan').subscriptionTermId);
+      }
+      var data = {
+        did: this.model.get('sDid'),
+        subscriptionTermId: this.model.get('subscriptionTermId')
+      }
+      oAddVcFlow.updateSubscriptionTermId(data).then(function () {
+        self.triggerMethod('serviceAgreement:render', self.model.attributes);
+      }, function (err) {
+        oAddVcFlow.stopProcessing(self.ui, err.errorMessage || err.statusText);
+      });
+    }
+  });
+
+  var VcActivateSuccessView = Marionette.ItemView.extend({
+    initialize: function () {
+    },
+    template: wl.shared.tpl.vcActivateSuccess,
+    ui: {
+      finish: '#finish'
+    },
+    events: {
+      'click @ui.finish': 'finish'
+    },
+    finish: function () {
+      this.triggerMethod('upgradeToProPlus:render', this.model.attributes);
+    }
+  });
+
+  var vcSettingsErrorView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.vcSettingsError,
+    ui: {
+      close: '#close',
+    },
+    events: {
+      'click @ui.close': 'onClickClose'
+    },
+    onClickClose: function () {
+      this.triggerMethod('vcSettings:render', this.model.attributes);
+    }
+  });
+
+  var InstallConfigIdsView = Marionette.ItemView.extend({
+    tagName: 'ul',
+    template: wl.shared.tpl.installConfigIds,
+    initialize: function (options) {
+      this.model = new Backbone.Model({
+        transceiverId: options.transceiverId
+      });
+    }
+  });
+
+  var InstallDeviceView = Marionette.LayoutView.extend({
+    template: wl.shared.tpl.installDevice,
+    ui: {
+      form: '.install-form',
+      transceiverType: '#transceiverType',
+      weatherStationId: '#weatherStationId',
+      rainCollector: '#rainCollector',
+      back: '#back',
+      submit: '#submit',
+      stationModelBlock: '#station_model_block'
+    },
+    events: {
+      'click @ui.back': 'returnBack',
+      'click @ui.submit': 'onSubmit'
+    },
+    regions: {
+      deviceIds: '#device-ids'
+    },
+    onBeforeShow: function () {
+      this.InstallConfigIdsView = new InstallConfigIdsView({
+        transceiverId: this.model.get('transceiverId')
+      });
+      this.showChildView('deviceIds', this.InstallConfigIdsView);
+    },
+    onShow: function () {
+      this.triggerMethod('modalContent:setHeight');
+    },
+    onRender: function () {
+      //init selectmenu
+      this.ui.transceiverType.selectmenu({
+        icons: {
+          button: "wl-icon icon-caretdown"
+        },
+        classes: {
+          "ui-selectmenu-menu": "addDevice transceiver-type",
+          "ui-selectmenu-button": "addDevice transceiver-type"
+        },
+        change: this.onTypeChange.bind(this)
+      });
+      this.ui.weatherStationId.selectmenu({
+        icons: {
+          button: "wl-icon icon-caretdown"
+        },
+        classes: {
+          "ui-selectmenu-menu": "addDevice station-model",
+          "ui-selectmenu-button": "addDevice station-model"
+        }
+      });
+      this.ui.rainCollector.selectmenu({
+        icons: {
+          button: "wl-icon icon-caretdown"
+        },
+        classes: {
+          "ui-selectmenu-menu": "addDevice rain-col",
+          "ui-selectmenu-button": "addDevice rain-col"
+        }
+      });
+
+      setTimeout(function () {
+        this.ui.transceiverType.selectmenu('refresh');
+        this.ui.rainCollector.selectmenu('refresh');
+      }.bind(this));
+
+      wl.app.oAddDevice.populateWeatherStationsModelsList.call(this);
+      this.showHideStationModelBlock(this.model.get(
+        'transceiverType'));
+      if (this.model.collection) { //if no collection - it's vc install flow
+        this.setTransceiverAvailableTypes();
+        this.handleSubmitAvailability();
+      }
+    },
+    handleSubmitAvailability: function () {
+      //console.log(this);
+    },
+    onTypeChange: function (e, ui) {
+      this.showHideStationModelBlock(Number(ui.item.value));
+      //handle in child view edit mode
+      if (this.changeIdSetting) {
+        this.changeIdSetting(e, Number(ui.item.value));
+      }
+    },
+    showHideStationModelBlock: function (transceiverType) {
+      if (transceiverType === 1 || transceiverType === 2) {
+        this.ui.stationModelBlock.show();
+      } else {
+        this.ui.stationModelBlock.hide();
+      }
+    },
+    onSubmit: function () {
+      var dataArray = this.ui.form.serializeArray();
+      _.forEach(dataArray, function (obj) {
+        this.model.set(obj.name, Number(obj.value));
+      }.bind(this));
+      if (this.model.get('transceiverType') !== 2) {
+        this.model.set('weatherStationId', 0);
+        this.model.set('rainCollectorType', 1);
+      }
+      this.triggerMethod('vcSettings:render', this.model.attributes);
+    },
+    returnBack: function () {
+      var self = this;
+      _.forEach(this.ui.form.serializeArray(), function (obj) {
+        self.model.set(obj.name, obj.value);
+      });
+      this.triggerMethod('vcActivate:render', this.model.attributes);
+    }
+  });
+
+  var InstallDeviceHeaderView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.installDeviceHeader
+  });
+
+  this.VcPlansBodyView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.vcPlansBody,
+    ui: {
+      errorBlock: '.error-block',
+      loadingIcon: ".loading-icon",
+      radio: 'input[type="radio"]',
+      back: '#back',
+      submit: '#submit',
+      close: '#payment-back',
+      planDesc: '.selected-plan-desc'
+    },
+    events: {
+      'click @ui.back': 'returnBack',
+      'click @ui.close': 'returnToBulletin',
+      'click @ui.submit': 'onSubmit',
+      'change @ui.radio': 'onChangePlan'
+    },
+    onRender: function () {
+      this.addChargedAnnuallyStatement();
+    },
+    onChangePlan: function (e) {
+      var subscriptionTermId = $(e.target).val();
+      var plans = this.model.get('servicePlans');
+      if (subscriptionTermId) {
+        this.model.set('subscriptionTermId', Number(subscriptionTermId));
+        var plan = plans.find(function (plan) { return plan.subscriptionTermId === Number(subscriptionTermId) });
+        this.model.set('selectedServicePlan', plan);
+        this.model.set('totalAmountDue', plan.totalCost);
+        this.ui.submit.removeAttr('disabled');
+        this.addChargedAnnuallyStatement();
+      }
+    },
+    addChargedAnnuallyStatement: function () {
+      if (!this.model.get('billToCompany') && this.model.get('selectedServicePlan')) {
+        this.ui.planDesc.addClass('border-top');
+        document.l10n.formatValue('selected_service_plan_charged_annually_desc',
+          { amount: this.model.get('selectedServicePlan').totalCost })
+          .then(function (translation) {
+            this.ui.planDesc.html(translation);
+          }.bind(this))
+      }
+    },
+    returnBack: function () {
+      this.triggerMethod('vcSettings:render', this.model.attributes);
+    },
+    returnToBulletin: function () {
+      window.location.href = '/bulletin';
+    },
+    onSubmit: function () {
+      var self = this;
+      this.ui.errorBlock.text('');
+      this.ui.loadingIcon.show();
+      this.ui.submit.prop('disabled', 'disabled');
+      var data = {
+        did: this.model.get('sDid'),
+        subscriptionTermId: this.model.get('subscriptionTermId')
+      };
+
+      oAddVcFlow.updateSubscriptionTermId(data).then(function () {
+        if (self.model.get('billToCompany')) {
+          self.triggerMethod('servicePlanConfirm:render', self.model.attributes);
+        } else {
+          self.triggerMethod('billingAddressForm:render', self.model.attributes);
+        }
+      }, function (err) {
+        oAddVcFlow.stopProcessing(self.ui, err.errorMessage || err.statusText);
+      });
+    },
+  });
+
+  this.VcPlansHeaderView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.vcPlansHeader
+  });
+
+  var PaymentFormHeaderView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.paymentFormHeader
+  });
+
+  this.PaymentFormBodyView = wl.app.oPayments.PaymentFormView.extend({
+    template: wl.shared.tpl.paymentFormBody,
+    events: {
+      "blur @ui.$couponCode": "onBlurCouponCodeInput",
+      "click @ui.$useSavedLink": "showSavedCard",
+      "click @ui.$enterNewCardLink": "showPaymentForm",
+      "click button#submit": "onClickPay",
+      "click button#back": "onClickBackBtn",
+    },
+    onClickPay: function () {
+      if (this.model.get('stripePaymentMethodId') && this.model.get('useSavedCard')) {
+        this.submitPaymentFormSaved();
+      } else {
+        this.submitPaymentForm();
+      }
+    },
+    postPayment: function () {
+      //move to final step
+      var self = this;
+      this.ui.errorBlock.text('');
+      var data = {
+        paymentMethod: 'CREDIT_CARD',
+        orderId: this.model.get('orderId'),
+        paymentIntentId: this.model.get('paymentIntentId'),
+        billingAddressInfo: {
+          address1: this.model.get('address1'),
+          address2: this.model.get('address2'),
+          city: this.model.get('city'),
+          state: this.model.get('state'),
+          zipCode: this.model.get('zipCode'),
+          countryCode: this.model.get('countryCode')
+        }
+      }
+
+      /*
+      * Activation Code (using token or existing card)
+      */
+      if (this.model.get('activationCode')) {
+        data.paymentMethod = 'ACTIVATION_CODE';
+      }
+
+      if (this.model.get('reactivateDevice')) {
+        if (bootstrap.makeDevicePayment) { //pending payment
+          oAddVcFlow.processPendingPayment(data).then(function (res) {
+            wl.deviceIdentifier = res.deviceIdentifier;
+            var options = Object.assign(self.model.attributes, res);
+            self.triggerMethod('reactivateSuccess:render', options);
+          }, function (err) {
+            oAddVcFlow.stopProcessing(self.ui, err.errorDetail || err.errorMessage);
+          });
+        } else { // suspended, canceled, or terminated.
+          oAddVcFlow.processReactivatePayment(data).then(function (res) {
+            wl.deviceIdentifier = res.deviceIdentifier;
+            var options = Object.assign(self.model.attributes, res);
+            self.triggerMethod('reactivateSuccess:render', options);
+          }, function (err) {
+            oAddVcFlow.stopProcessing(self.ui, err.errorDetail || err.errorMessage);
+          });
+        }
+      } else {
+        oAddVcFlow.processPayment(data).then(function (res) {
+          if (res) {
+            wl.deviceIdentifier = res.deviceIdentifier;
+            self.triggerMethod('activateSuccess:render', res);
+          }
+        }, function (err) {
+          oAddVcFlow.stopProcessing(self.ui, err.errorDetail || err.errorMessage);
+        });
+      }
+    }
+  });
+
+  this.BillingAddressFormBodyView = wl.app.oPayments.MakePaymentView.extend({
+    template: wl.shared.tpl.billingAddressFormBody,
+    ui: {
+      "next": "#submit",
+      "back": "#back",
+      "processing": "#paymentProcessing",
+      "skipPayment": ".skip-payment",
+      "paymentError": ".payment-error",
+    },
+    events: {
+      "click @ui.next": "onClickNext",
+      "click @ui.back": "onClickBack",
+      "click @ui.skipPayment": "onClickSkipPayment"
+    },
+    childEvents: {
+      'form:change': function () {
+        this.onFieldsChange();
+      },
+      'confirm-address:render': function (view, data) {
+        this.triggerMethod('external:confirm-address:render', data);
+      },
+      'countriesList:get': function (view, data) {
+        this.model.set('countriesList', data);
+      },
+      'useSavedCardOption:change': function (view, data) {
+        this.setNextBtnState(data);
+      },
+      'processing:start': function () {
+        this.startProcessing();
+      },
+      'processing:stop': function () {
+        this.stopProcessing();
+      },
+    },
+    initialize: function () {
+      //check if user has saved card
+      this.getPaymentInfo(this.model.get('sDid')).then(function () {
+        var options = {
+          standalone: true,
+          model: this.model
+        };
+
+        this.ui.processing.hide();
+        this.showBillingAddressForm(options);
+      }.bind(this));
+    },
+    getPaymentInfo: function (sDid) {
+      var d = $.Deferred();
+      $.get('/deviceSubscription/getDeviceSubscriptionPaymentInfo/' + sDid, function (response) {
+        if (response.data != null) {
+          this.model.set('paymentDetails', response.data.creditCardProfile);
+          this.model.set('cardExpired', wl.app.oPayments.checkIfCardExpired(response.data));
+          if (response.data.creditCardProfile) {
+            this.model.set('stripePaymentMethodId', response.data.creditCardProfile.stripePaymentMethodId);
+          }
+          if(this.model.get('cardExpired')) {
+            this.ui.next.prop('disabled', 'disabled');
+          }
+          if (response.data.showSkipPayment) {
+            this.ui.skipPayment.show();
+          }
+          // //load Stripe publisher key
+          // Stripe.setPublishableKey(response.data.paymentKey);
+          if (!this.model.get('validatedAddresses').length && response.data.creditCardProfile) {
+            this.model.set('address1', response.data.creditCardProfile.address1);
+            this.model.set('city', response.data.creditCardProfile.city);
+            this.model.set('state', response.data.creditCardProfile.region);
+            this.model.set('zipCode', response.data.creditCardProfile.zipCode);
+            this.model.set('countryId', response.data.creditCardProfile.countryId);
+          }
+        }
+        d.resolve(response.data);
+      }.bind(this));
+      return d.promise();
+    },
+    setNextBtnState: function (useSavedCard) {
+      if(this.model.get('cardExpired') && useSavedCard) {
+        this.ui.next.prop('disabled', 'disabled');
+      } else {
+        this.ui.next.prop('disabled', false);
+      }
+    },
+    onFieldsChange: function () {
+      this.ui.next.show();
+    },
+    onClickBack: function () {
+      if (this.model.get('activationCode')) {
+        this.triggerMethod('vcSettings:render', this.model.attributes);
+      } else {
+        this.triggerMethod('plans:render', this.model.attributes);
+      }
+    },
+    onClickNext: function () {
+      this.mainRegion.currentView.trigger('external:validate-address');
+    },
+    onClickSkipPayment: function () {
+      this.triggerMethod('skipPayment:render', this.model.attributes);
+    },
+    startProcessing: function () {
+      this.ui.next.prop('disabled', true);
+    },
+    stopProcessing: function () {
+      this.ui.next.prop('disabled', false);
+    }
+  });
+
+  var ConfirmAddressHeaderView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.confirmAddressHeader
+  });
+
+  this.ConfirmAddressBodyView = wl.app.oPayments.ConfirmAddressView.extend({
+    template: wl.shared.tpl.confirmAddressBody,
+    initialize: function () {
+    },
+    onClickBack: function () {
+      this.triggerMethod('billingAddressForm:render', this.model.attributes);
+    },
+    onClickSubmit: function () {
+      this.getAmountDueWithTax();
+    },
+  });
+
+  var SkipPaymentHeaderView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.skipPaymentHeader
+  });
+
+  this.SkipPaymentBodyView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.skipPaymentBody,
+    ui: {
+      'submit': '#submit',
+      'back': '#back',
+      'form': 'form',
+      'country': '#country',
+      'countryInput': '.country',
+      'combobox': '.custom-combobox',
+      'addressSection': '.address-section',
+      'addressInput': '#address-input',
+      'cityInput': '#city',
+      'stateInput': '#state'
+    },
+    events: {
+      'click @ui.submit': 'onClickSubmit',
+      'click @ui.back': 'onClickBack',
+      'select @ui.country': 'onChangeCountry',
+      'keypress @ui.countryInput': 'onCountryKeyPress',
+      'blur @ui.countryInput': 'onBlurCountryInput',
+    },
+    onRender: function () {
+      //define validator
+      this.validator = FORM_VALIDATOR.skipPayment(this.ui.form);
+
+      if (this.model.get('countriesList')) {
+        setTimeout(function () {
+          this.populateCountriesList(this.model.get('countriesList'));
+        }.bind(this));
+      }
+      if (this.model.get('countryId') === '114' || this.model.get(
+        'countryId') === '17') {
+        this.ui.addressSection.find('.form-group').show();
+      }
+    },
+    populateCountriesList: function (countries) {
+      var $selectEl = this.ui.country;
+      var countryCode = this.model.get('payLaterProfile').address.countryCode;
+      $selectEl.append('<option></option>');
+      _.forEach(countries, function (country) {
+        $selectEl.append('<option data-code="' +
+          country.iso2Code + '" value="' + country.countryId +
+          '">' + country.countryName + '</option>')
+      });
+      if (countryCode) {
+        $selectEl.val(this.model.get('countryId'));
+        $selectEl.find('option[data-code=' + countryCode + ']').attr('selected',
+          true);
+      }
+      $selectEl.combobox();
+      if (countryCode === "US" || countryCode === "CA") {
+        this.ui.addressSection.find('.form-group').show();
+      } else {
+        this.ui.addressSection.find('.form-group').hide();
+        this.ui.addressSection.find(
+          '.form-group.country-group, .form-group.zip-code').show();
+      }
+      //$selectEl.trigger('select');
+      setTimeout(function () {
+        this.ui.countryInput.autocomplete('enable');
+      }.bind(this));
+    },
+    onCountryKeyPress: function (e) {
+      if (e.which == 13) {
+        this.ui.countryInput.blur()
+      }
+    },
+    onBlurCountryInput: function (e) {
+      var val = $(e.target).val();
+      if (val) {
+        this.ui.country.find('option').filter(function () {
+          return $(this).text().length && $(this).text().indexOf(val) !== -1;
+        }).attr('selected', true);
+        this.ui.combobox.find('.help-block').remove();
+        //this.ui.$country.trigger('select');
+      }
+      if (!Utils.isIE()) {
+        $('.ui-menu:not(:hidden) .ui-menu-item-wrapper').first().click();
+      }
+    },
+    onChangeCountry: function (e) {
+      var countryCode = $(e.target).find('option:selected').attr(
+        'data-code');
+      if (countryCode === "US" || countryCode === "CA") {
+        this.ui.addressSection.find('.form-group').show();
+      } else {
+        var payLaterProfile = this.model.get('payLaterProfile');
+        this.ui.addressInput.val('');
+        this.ui.cityInput.val('');
+        this.ui.stateInput.val('');
+        delete payLaterProfile.address.state;
+        this.model.set('payLaterProfile', payLaterProfile);
+        this.ui.addressSection.find('.form-group').hide();
+        this.ui.addressSection.find(
+          '.form-group.country-group, .form-group.zip-code').show();
+      }
+      this.triggerMethod('form:change');
+    },
+    onClickBack: function () {
+      this.triggerMethod('billingAddressForm:render', this.model.attributes);
+    },
+    onClickSubmit: function () {
+      if (this.ui.form.valid()) {
+        var dataArray = this.ui.form.serializeArray();
+        var payLaterProfile = this.model.get('payLaterProfile');
+        _.forEach(dataArray, function (obj) {
+          if (['name', 'email', 'company'].includes(obj.name)) {
+            payLaterProfile[obj.name] = obj.value;
+          } else {
+            payLaterProfile.address[obj.name] = obj.value;
+          }
+        }.bind(this));
+        payLaterProfile.address.countryCode = this.ui.country.find('option:selected').attr('data-code');
+        this.model.set('payLaterProfile', payLaterProfile);
+        this.triggerMethod('skipPaymentConfirm:render', this.model.attributes);
+      }
+    }
+  });
+
+  this.SkipPaymentConfirmBodyView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.skipPaymentConfirmBody,
+    ui: {
+      submit: '#submit',
+      back: '#back',
+      errorBlock: '.error-block',
+      loadingIcon: '.loading-icon'
+    },
+    events: {
+      'click @ui.submit': "onClickSubmit",
+      'click @ui.back': 'onClickBack'
+    },
+    onClickBack: function () {
+      this.triggerMethod('skipPayment:render', this.model.attributes);
+    },
+    onClickSubmit: function () {
+      var self = this;
+      this.ui.errorBlock.text('');
+      var data = {
+        paymentMethod: 'PENDING_PAY',
+        orderId: this.model.get('orderId'),
+        payLaterProfile: this.model.get('payLaterProfile')
+      }
+      this.ui.loadingIcon.show();
+      this.ui.submit.prop('disabled', 'disabled');
+      oAddVcFlow.processPayment(data).then(function (res) {
+        var options = Object.assign(self.model.attributes, res);
+        self.triggerMethod('activateSuccess:render', options);
+      }, function (err) {
+        oAddVcFlow.stopProcessing(self.ui, err.errorDetail || err.errorMessage);
+      });
+    }
+  });
+
+  var ConfirmServicePlanHeaderView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.confirmServicePlanHeader
+  });
+
+  this.ConfirmServicePlanBodyView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.confirmServicePlanBody,
+    ui: {
+      submit: '#submit',
+      back: '#back',
+      errorBlock: '.error-block',
+      loadingIcon: '.loading-icon'
+    },
+    events: {
+      'click @ui.submit': 'onClickSubmit',
+      'click @ui.back': 'onClickBack'
+    },
+    initialize: function () {
+      if (!this.model.get('selectedServicePlan')) {
+        this.model.set('selectedServicePlan', this.model.get('servicePlans')[0]);
+      }
+    },
+    onClickBack: function () {
+      if (this.model.get('activationCode')) {
+        this.triggerMethod('vcSettings:render', this.model.attributes);
+      } else {
+        this.triggerMethod('plans:render', this.model.attributes);
+      }
+    },
+    onClickSubmit: function () {
+      var self = this;
+      this.ui.errorBlock.text('');
+
+      var method = this.model.get('activationCode') ? 'ACTIVATION_CODE' : 'RESELLER_CREDIT_CARD';
+      var data = {
+        paymentMethod: method,
+        orderId: this.model.get('orderId')
+      }
+      this.ui.loadingIcon.show();
+      this.ui.submit.prop('disabled', 'disabled');
+
+      oAddVcFlow.processPayment(data).then(function (res) {
+        var options = Object.assign(self.model.attributes, res);
+        if (self.model.get('reactivateDevice')) {
+          self.triggerMethod('reactivateSuccess:render', options);
+        } else {
+          self.triggerMethod('activateSuccess:render', options);
+        }
+      }, function (err) {
+        oAddVcFlow.stopProcessing(self.ui, err.errorDetail || err.errorMessage);
+      });
+    }
+  });
+
+  this.ActiveServicePlanBodyView = Marionette.ItemView.extend({
+    template: wl.shared.tpl.activeServicePlanBody,
+    ui: {
+      submit: '#submit',
+      errorBlock: '.error-block',
+      loadingIcon: '.loading-icon'
+    },
+    events: {
+      'click @ui.submit': 'onClickProceed'
+    },
+    initialize: function () {
+    },
+    onClickProceed: function () {
+      if (this.model.get('deviceType') === 'MAIA') {
+        window.location.replace('/deviceSubscription/mobile/completed');
+      } else {
+        this.activateSubscription();
+      }
+    },
+    activateSubscription: function () {
+      var self = this;
+      this.ui.loadingIcon.show();
+      this.ui.submit.prop('disabled', 'disabled');
+      this.ui.errorBlock.text('');
+      $.ajax({
+        url: '/iris/activateVCActiveSubscription/' + self.model.get('sDid'),
+        method: 'POST',
+        success: function (res) {
+          if (res.data != null) {
+            var options = Object.assign(self.model.attributes, res.data);
+            self.triggerMethod('activateSuccess:render', options);
+          } else {
+            oAddVcFlow.stopProcessing(self.ui, res.error.errorMessage || res.err.statusText);
+          }
+        },
+        error: function (err) {
+          oAddVcFlow.stopProcessing(self.ui, err.errorMessage || err.statusText);
+        }
+      });
+    }
+  });
+
+  this.UpgradeToProPlusLayoutView = Marionette.LayoutView.extend({
+    template: _.template('<div class="payment-form-container standalone" style="background: #fff">' +
+      '<div id="body" style="width: 100%"></div></div>' +
+      '<div class="payment-processing" id="paymentProcessing">' +
+      '<div class="processing-header" data-l10n-id="payment_processing"></div>' +
+      '<div class="processing-spinner"></div></div>'),
+    regions: {
+      body: '#body'
+    },
+    ui: {
+      paymentProcessing: '#paymentProcessing'
+    },
+    childEvents: {
+      'addMoreSensors:render': function (obj, data) {
+        this.renderAddMoreSensors(data);
+      }
+    },
+    onBeforeShow: function () {
+      this.loadSubscriptionTypes().then(function (res) {
+        this.showChildView('body', new UpgradeToProPlusItemView({
+          subscriptionTypes: res,
+          systemId: this.model.get('systemId') || wl.data.systemId,
+          mobile: this.model.get('mobile'),
+          upgradesAvailable: this.model.get('upgradesAvailable'),
+          userSubscriptionTerm: this.model.get('userSubscriptionTerm'),
+          userSubscriptionTier: this.model.get('userSubscriptionTier'),
+          deviceIdentifier: this.model.get('deviceIdentifier')
+        }));
+        this.ui.paymentProcessing.hide();
+      }.bind(this)),
+        function (err) {
+          console.log(err);
+        }
+    },
+    renderAddMoreSensors: function (data) {
+      this.showChildView('body', new wl.app.oPayments.AddMoreSensorsView(data));
+    },
+    loadSubscriptionTypes: function () {
+      var d = $.Deferred();
+      $.get('/accountSubscription/userSubscriptionPlansPricing', function (response) {
+        if (response.data != null) {
+          d.resolve(response.data.subscriptionTypes);
+        } else {
+          d.resolve([]);
+        }
+      }.bind(this));
+      return d.promise();
+    },
+  });
+
+  var UpgradeToProPlusItemView = Marionette.ItemView.extend({
+    model: new Backbone.Model({
+      mobile: false,
+      subscriptionTerms: null,
+      newSubscrTypeId: 3,
+      newSubscriptionTermId: 3,
+      currentSubscrLengthInMonths: 12,
+      userSubscriptionTypeId: null,
+      subscriptionTypes: null,
+      lengthInMonths: 12,
+      systemId: null,
+      upgradesAvailable: null,
+      userSubscriptionTerm: null,
+      userSubscriptionTier: null,
+      baseUrl: '/accountSubscription#makePayment/'
+    }),
+    template: wl.shared.tpl.upgradeToProPlusBody,
+    ui: {
+      $subscriptionTermRadio: 'input[name="subscriptionTerm"]',
+      $upgradeToProPlus: '#submit',
+      $usePro: '#back'
+    },
+    events: {
+      'change @ui.$subscriptionTermRadio': 'onChangeSubscriptionTerm',
+      'click @ui.$upgradeToProPlus': 'onClickUpgradeToProPlus',
+      'click @ui.$usePro': 'onClickUsePro'
+    },
+    initialize: function (options) {
+      this.model.set('subscriptionTypes', options.subscriptionTypes);
+      this.model.set('systemId', options.systemId || wl.data.systemId || wl.bootstrap.systemId);
+      this.model.set('mobile', options.mobile);
+      this.model.set('upgradesAvailable', options.upgradesAvailable);
+      this.model.set('userSubscriptionTerm', options.userSubscriptionTerm);
+      this.model.set('userSubscriptionTier', options.userSubscriptionTier);
+      this.model.set('deviceIdentifier', options.deviceIdentifier);
+      var currentSubscriptionType = _.find(this.model.get('subscriptionTypes'), {
+        userSubscriptionTypeId: this.model.get('userSubscriptionTier')
+      });
+
+      //this model attribute is used to control whether the user can select 1 year term or not,
+      //so we set it to 12 for Basic case to handle above case as well fulfill the dependency
+      //on this attribute
+      var currentLengthInMonths = 12;
+      if (currentSubscriptionType.userSubscriptionTypeId !== 1) {
+        currentLengthInMonths = _.get(_.find(currentSubscriptionType.subscriptionTerms, {
+          iUserSubscriptionTermId: this.model.get('userSubscriptionTerm')
+        }), 'lengthInMonths');
+        //sync the term to current term
+      }
+
+      this.model.set('lengthInMonths', currentLengthInMonths);
+
+      var subscriptionType = _.find(this.model.get('subscriptionTypes'), {
+        userSubscriptionTypeId: this.model.get('newSubscrTypeId')
+      });
+      var newSubscriptionTermId = _.get(_.find(subscriptionType.subscriptionTerms, {
+        lengthInMonths: currentLengthInMonths
+      }), 'iUserSubscriptionTermId');
+
+      this.model.set('newSubscriptionTermId', newSubscriptionTermId);
+      this.model.set('currentSubscrLengthInMonths', currentLengthInMonths);
+      this.model.set('subscriptionTerms', _.get(subscriptionType, 'subscriptionTerms'));
+      this.model.set('baseUrl', options.mobile ? '/accountSubscription/mobile#makePayment/' :
+        '/accountSubscription#makePayment/');
+    },
+    onRender: function () {
+      var subscriptionTerms = this.model.get('subscriptionTerms');
+      var currentTerm = _.find(subscriptionTerms, {
+        iUserSubscriptionTermId: this.model.get('newSubscriptionTermId')
+      });
+      if (!currentTerm) { //when changing subscr type
+        currentTerm = _.find(subscriptionTerms, {
+          lengthInMonths: this.model.get('lengthInMonths')
+        });
+      } else {
+        this.model.set('subscrPricePerMonth', (this.model.get(
+          'totalAmountDue') / currentTerm.lengthInMonths).toFixed(2));
+        this.model.set('lengthInMonths', currentTerm.lengthInMonths);
+      }
+    },
+    onChangeSubscriptionTerm: function (e) {
+      var $radioBtn = $(e.target);
+      var lengthInMonth = $radioBtn.attr('data-length');
+      this.model.set('newSubscriptionTermId', Number($radioBtn.val()));
+      this.model.set('lengthInMonths', Number(lengthInMonth));
+      this.render();
+    },
+    loadSubscriptionTypes: function () {
+      var d = $.Deferred();
+      $.get('/accountSubscription/userSubscriptionPlansPricing', function (response) {
+        if (response.data != null) {
+          d.resolve(response.data.subscriptionTypes);
+        } else {
+          d.resolve([]);
+        }
+      }.bind(this));
+      return d.promise();
+    },
+    onClickUpgradeToProPlus: function () {
+      var numOfUpgrades = 1;
+      if (this.model.get('userSubscriptionTier') === 2 && this.model.get('upgradesAvailable')) {
+        numOfUpgrades = 0;
+      }
+      if (window.sessionStorage) {
+        sessionStorage.setItem('showAddMoreSensors', 'true'); // show after account subscription flow
+      }
+      window.location.replace(this.model.get('baseUrl') + this.model.get('systemId') + "/0/false/ProPlus/" +
+        + numOfUpgrades + "/" + this.model.get('lengthInMonths') + "/upgrade");
+    },
+    onClickUsePro: function () {
+      if (this.model.get('mobile')) {
+        window.location.href = '/bulletin/' + this.model.get('deviceIdentifier');
+      } else {
+        this.triggerMethod('addMoreSensors:render', this.model.attributes);
+      }
+    }
+  });
+
+  this.updateSubscriptionTermId = function (data) {
+    var d = $.Deferred();
+    $.ajax({
+      url: '/iris/updateSubscriptionTermId',
+      method: 'POST',
+      data: data,
+      success: function (res) {
+        if (res.data) {
+          d.resolve(res.data);
+        } else {
+          d.reject(res.error);
+        }
+      }.bind(this),
+      error: function (err) {
+        d.reject(err);
+      }
+    });
+    return d.promise();
+  }
+
+  this.processPayment = function (data) {
+    var d = $.Deferred();
+    $.ajax({
+      type: 'POST',
+      url: '/deviceSubscription/process/newInstall',
+      contentType: 'application/json',
+      data: JSON.stringify(data),
+      success: function (response) {
+        if (response.data) {
+          d.resolve(response.data);
+        } else if (response.error) {
+          d.reject(response.error);
+        }
+      }.bind(this),
+      error: function (error) {
+        d.reject(error);
+      },
+    });
+    return d.promise();
+  }
+
+  this.processPendingPayment = function (data) {
+    var d = $.Deferred();
+    $.ajax({
+      type: 'POST',
+      url: '/deviceSubscription/process/pendingPayment',
+      contentType: 'application/json',
+      data: JSON.stringify(data),
+      success: function (response) {
+        if (response.data) {
+          d.resolve(response.data);
+        } else if (response.error) {
+          d.reject(response.error);
+        }
+      }.bind(this),
+      error: function (error) {
+        d.reject(error);
+      },
+    });
+    return d.promise();
+  }
+
+  this.processReactivatePayment = function (data) {
+    var d = $.Deferred();
+    $.ajax({
+      type: 'POST',
+      url: '/deviceSubscription/process/reactivation',
+      contentType: 'application/json',
+      data: JSON.stringify(data),
+      success: function (response) {
+        if (response.data) {
+          d.resolve(response.data);
+        } else if (response.error) {
+          d.reject(response.error);
+        }
+      }.bind(this),
+      error: function (error) {
+        d.reject(error);
+      },
+    });
+    return d.promise();
+  }
+
+  this.stopProcessing = function (ui, errMsg) {
+    ui.errorBlock.text(errMsg);
+    ui.loadingIcon.hide();
+    ui.submit.prop('disabled', false);
+    console.log(errMsg);
+  }
+
+  //public views
+  this.InstallDeviceView = InstallDeviceView;
+
+});

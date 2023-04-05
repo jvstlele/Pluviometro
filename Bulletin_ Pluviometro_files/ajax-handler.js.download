@@ -1,0 +1,13 @@
+/**
+ * Created by mikalai.lushchytski on 8/18/2016.
+ *
+ * <p />
+ * Global ajax event processors
+ */
+(function ($) {
+    $( document ).ajaxError(function( event, jqxhr, settings, thrownError ) {
+        if ( jqxhr.status === 401 ) { // not authorized
+            window.location.href = '/';
+        }
+    });
+} (jQuery));
