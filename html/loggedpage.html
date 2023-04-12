@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pluviometro</title>
+    <!--Reset css per ogni broswer-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css" integrity="sha512-NmLkDIU1C/C88wi324HBc+S2kLhi08PN5GDeUVVVC/BVt/9Izdsc9SVeVfA1UZbY3sHUlDSyRXhCzHfr6hmPPw==" crossorigin="anonymous" />
+    
+    <!--Script scroll-->
+    <script src="https://unpkg.com/scrollreveal@4.0.0/dist/scrollreveal.min.js"></script>
+    
+    <!--Icone-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" />
+    
+    <!--Icona tab di google-->
+    <link rel="icon" href="Fulmine viola bianco.png">
+
+    <!--Icons-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css">
+    
+    <link rel="stylesheet" href="/climate_change_v4.2/css/style.css">
+    <link rel="stylesheet" href="/climate_change_v4.2//css/hero2.css">
+    <link rel="stylesheet" href="/climate_change_v4.2//css/nav2.css">
+    <link rel="stylesheet" href="/climate_change_v4.2//css/sliderxas.css">
+    <link rel="stylesheet" href="/climate_change_v4.2//css/footer.css">
+    <link rel="stylesheet" href="/climate_change_v4.2//css/weather.css">
+    <link rel="stylesheet" href="/climate_change_v4.2/css/top_button.css">
+
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Overpass&display=swap');
+        </style>
+        
+    <!--Font-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+
+      <!-- 
+    - favicon
+  -->
+  <link rel="shortcut icon" href="/climate_change_v4.2/assets/favicon.svg" type="image/svg+xml">
+
+  <!-- 
+    - custom css link
+  -->
+  <link rel="stylesheet" href="/climate_change_v4.2/css/about_style.css">
+
+  <!-- 
+    - google font link
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;900&display=swap"
+    rel="stylesheet">
+
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script  src="/climate_change_v4.2/js/top_button_script.js"></script>
+
+</head>
+<body>
+
+<!--NavBar
+
+<div class="navbar">
+<header class="cd-header">
+    <div class="header-wrapper">
+        <div class="logo-wrap">
+            <a href="/climate_change_v4.2/html/index.html" class="hover-target"><span>☔Pluvio</span>Metro</a>
+        </div>
+        <div class="nav-but-wrap">
+            <div class="menu-icon hover-target">
+                <span class="menu-icon__line menu-icon__line-left"></span>
+                <span class="menu-icon__line"></span>
+                <span class="menu-icon__line menu-icon__line-right"></span>
+            </div>					
+        </div>					
+    </div>				
+</header>
+
+<div class="nav">
+    <div class="nav__content">
+        <ul class="nav__list">
+            <li class="nav__list-item active-nav"><a href="#" class="hover-target">home</a></li>
+            <li class="nav__list-item"><a href="meteo.html" class="hover-target">Meteo</a></li>
+            <li class="nav__list-item"><a href="#" class="hover-target">news</a></li>
+            <li class="nav__list-item"><a href="#" class="hover-target">contact</a></li>
+        </ul>
+    </div>
+</div>		
+
+<div class='cursor' id="cursor"></div>
+<div class='cursor2' id="cursor2"></div>
+<div class='cursor3' id="cursor3"></div>
+</div>-->
+
+      <!-- 
+        - #HERO
+      -->
+      <section class="section hero" aria-label="home">
+        <div class="container_2">
+
+          <h1 class="headline-lg hero-title">
+            Climate change
+            sbirulo <span class="span">cagato,puzzo?</span>
+          </h1>
+
+          <p class="section-text body-lg">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla imperdiet nulla duis ac. Id massa scelerisque
+            venenatis,massa gravida donec orci.
+          </p>
+
+          <a href="#" class="button" onclick="goCards()">Explore now</a>
+
+        </div>
+      </section>
+
+  <div class="body-bg-shape"></div>
+  <!-- 
+    - #HEADER-->
+  
+  <div class="body_header">
+    <header class="header" data-header>
+      <div class="container_hd">
+  
+        <a href="#" class="logo_1">
+          <img src="/climate_change_v4.2/assets/logo_nav.svg" width="187" height="38" alt="logo_1">
+        </a>
+  
+        <nav class="navbar" data-navbar>
+  
+          <div class="navbar-top">
+            <a href="#" class="logo_1">
+              <img src="/climate_change_v4.2/assets/logo_nav.svg" width="187" height="38" alt="logo_1">
+            </a>
+  
+            <button class="nav-toggle-btn" aria-label="close menu" data-nav-toggler>
+              <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+            </button>
+          </div>
+  
+          <ul class="navbar-list">
+  
+            <li class="navbar-item">
+              <a href="#" class="navbar-link active">Home</a>
+            </li>
+  
+            <li class="navbar-item">
+              <a href="#" onclick="goAbout()" class="navbar-link">About</a>
+            </li>
+  
+            <li class="navbar-item">
+              <a href="#" class="navbar-link">Services</a>
+            </li>
+  
+            <li class="navbar-item">
+              <a href="#" class="navbar-link">Pricing</a>
+            </li>
+  
+            <li class="navbar-item">
+              <a href="#" onclick="goContact()" class="navbar-link">Contact</a>
+            </li>
+  
+          </ul>
+  
+          <div class="header-action">
+            <a href="/climate_change_v4.2/php/logout.php" class="login-btn">Logout</a>
+  
+            <a href="/climate_change_v4.2/php/login_register.php" class="signup btn-primary_1">Sign Up</a>
+          </div>
+  
+        </nav>
+  
+        <button class="nav-toggle-btn" aria-label="open menu" data-nav-toggler>
+          <ion-icon name="menu-outline" aria-hidden="true"></ion-icon>
+        </button>
+  
+        <div class="overlay" data-overlay data-nav-toggler></div>
+  
+      </div>
+    </header>
+  </div>
+
+
+<!--Climate Testo
+
+<div class="wrapper">
+    <img src="/climate_change_v4.2/assets/An7.svg" alt="water icon">
+    <h1>Climate <span class="mask">change</span></h1>
+  </div>-->
+
+        <!-- 
+        - #ABOUT
+      -->
+
+      <div class="about_body">
+      <section class="section about" id="about">
+        <div class="container">
+
+          <h2 class="h2 section-title">I Nostri Servizi</h2>
+
+          <p class="section-text">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla imperdiet nulla duis ac. Id massa scelerisque
+            venenatis,
+            massa gravida donec orci.
+          </p>
+
+          <ul class="about-list">
+
+            <li>
+              <div class="about-card about-card-1">
+
+                <figure class="card-banner">
+                  <img src="/climate_change_v4.2/assets/pin.png" width="100" height="94" loading="lazy"
+                    alt="Automated Ticket Routing">
+                </figure>
+
+                <div class="card-content">
+
+                  <h3 class="h3">
+                    <a href="/climate_change_v4.2/php/mappa.php" class="card-title">Mappa interattiva</a>
+                  </h3>
+
+                  <p class="card-text">
+                    Mappa interattiva globale del meteo.
+                  </p>
+
+                  <a href="/climate_change_v4.2/php/mappa.php" class="btn-link">
+                    <span class="span">Scopri di più</span>
+
+                    <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon>
+                  </a>
+
+                </div>
+
+              </div>
+            </li>
+
+            <li>
+              <div class="about-card about-card-2">
+
+                <figure class="card-banner">
+                  <img src="/climate_change_v4.2/assets/drop.png" width="100" height="94" loading="lazy"
+                    alt="Workflow Automation">
+                </figure>
+
+                <div class="card-content">
+
+                  <h3 class="h3">
+                    <a href="/climate_change_v4.2/html/meteo.html" class="card-title">Meteo in tempo reale</a>
+                  </h3>
+
+                  <p class="card-text">
+                    Previsioni meteo precise per la pianificazione.
+                  </p>
+
+                  <a href="/climate_change_v4.2/html/meteo.html" class="btn-link">
+                    <span class="span">Scopri di più</span>
+
+                    <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon>
+                  </a>
+
+                </div>
+
+              </div>
+            </li>
+
+            <li>
+              <div class="about-card about-card-3">
+
+                <figure class="card-banner">
+                  <img src="/climate_change_v4.2/assets/card_image/about-img-3.svg" width="94" height="94" loading="lazy"
+                    alt="Automated Callback">
+                </figure>
+
+                <div class="card-content">
+
+                  <h3 class="h3">
+                    <a href="#" class="card-title">Allarme</a>
+                  </h3>
+
+                  <p class="card-text">
+                    Allarme meteo tempestivo per proteggere la sicurezza.
+                  </p>
+
+                  <a href="#" class="btn-link">
+                    <span class="span">Scopri di più</span>
+
+                    <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon>
+                  </a>
+
+                </div>
+
+              </div>
+            </li>
+
+            <li>
+              <div class="about-card about-card-4">
+
+                <figure class="card-banner">
+                  <img src="/climate_change_v4.2/assets/sun.png" width="110" height="94" loading="lazy"
+                    alt="Customer Feedback Surveys">
+                </figure>
+
+                <div class="card-content">
+
+                  <h3 class="h3">
+                    <a href="#" class="card-title">Montesarchio</a>
+                  </h3>
+
+                  <p class="card-text">
+                    Informazioni meteo precise e personalizzate per Montesarchio.
+                  </p>
+
+                  <a href="#" class="btn-link">
+                    <span class="span">Scopri di più</span>
+
+                    <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon>
+                  </a>
+
+                </div>
+
+              </div>
+            </li>
+
+          </ul>
+
+          <p class="section-text">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Eget gravida facilisis maecenas vitae.
+            <a href="#" class="btn-link">
+              <span class="span">View All Features</span>
+
+              <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon>
+            </a>
+          </p>
+
+        </div>
+      </section>
+    </div>
+
+    <!--button to top-->
+    
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.css"/>
+
+  <button id="back-to-up" onclick="scrollToTop()" class="top-btn d-done">
+      <i id="freccia" class="fas fa-arrow-up" aria-hidden="true"></i>
+  </button>
+
+
+          <!-- 
+        - #STATS -->
+
+      <section class="section stats">
+        <div class="container">
+
+          <figure class="stats-banner">
+            <img src="/climate_change_v4.2/assets/umbrella.svg" width="619" height="482" loading="lazy" alt="stats"
+              class="w-100">
+          </figure>
+
+          <ul class="stats-list">
+
+            <li class="stats-item purple">
+              <h3 class="item-title">
+                386
+                <span class="span">million</span>
+              </h3>
+
+              <p class="stats-text">Human Actions Saved On Techx</p>
+            </li>
+
+            <li class="stats-item red">
+              <h3 class="item-title">
+                999
+                <span class="span">million</span>
+              </h3>
+
+              <p class="stats-text">Users Throughout The World</p>
+            </li>
+
+            <li class="stats-item green">
+              <h3 class="item-title">
+                200
+                <span class="span">percent</span>
+              </h3>
+
+              <p class="stats-text">Revenue Growth</p>
+            </li>
+
+            <li class="stats-item yellow">
+              <h3 class="item-title">
+                50
+                <span class="span">software</span>
+              </h3>
+
+              <p class="stats-text">Integration Support In Techx</p>
+            </li>
+
+          </ul>
+
+        </div>
+      </section>
+
+
+            <!-- 
+        - #SERVICE
+      -->
+
+      <section class="section service" id="services">
+        <div class="container">
+
+          <h2 class="h2 section-title">Esplora</h2>
+
+          <p class="section-text">
+            Scopri i problemi relativi al cambiamento climatico e gli sturmenti che abbiamo usato per le nostre previsioni.
+          </p>
+
+          <ul class="service-list">
+
+            <li>
+              <div class="service-card">
+
+                <figure class="card-banner">
+                  <img src="/climate_change_v4.2/assets/card_image/service-1.gif"  loading="lazy" alt="support"
+                    class="w-100">
+                </figure>
+
+                <div class="card-content">
+
+                  <h3 class="h3">
+                    <a href="#" class="card-title">Support</a>
+                  </h3>
+
+                  <p class="card-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla imperdiet nulla duis consectetur
+                    adipiscing elit.
+                  </p>
+
+                  <a href="#" class="btn-link">
+                    <span class="span">Leggi di più</span>
+
+                    <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon>
+                  </a>
+
+                </div>
+
+              </div>
+            </li>
+
+            <li>
+              <div class="service-card">
+
+                <figure class="card-banner">
+                  <img src="/climate_change_v4.2/assets/card_image/service-2.gif" loading="lazy" alt="Engagement"
+                    class="w-100">
+                </figure>
+
+                <div class="card-content">
+
+                  <h3 class="h3">
+                    <a href="#" class="card-title">Engagement</a>
+                  </h3>
+
+                  <p class="card-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla imperdiet nulla duis consectetur
+                    adipiscing elit.
+                  </p>
+
+                  <a href="#" class="btn-link">
+                    <span class="span">Leggi di più</span>
+
+                    <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon>
+                  </a>
+
+                </div>
+
+              </div>
+            </li>
+
+            <li>
+              <div class="service-card">
+
+                <figure class="card-banner">
+                  <img src="/climate_change_v4.2/assets/card_image/service-3.gif" loading="lazy" alt="Marketing"
+                    class="w-100">
+                </figure>
+
+                <div class="card-content">
+
+                  <h3 class="h3">
+                    <a href="#" class="card-title">Marketing</a>
+                  </h3>
+
+                  <p class="card-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla imperdiet nulla duis consectetur
+                    adipiscing elit.
+                  </p>
+
+                  <a href="#" class="btn-link">
+                    <span class="span">Leggi di più</span>
+
+                    <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon>
+                  </a>
+
+                </div>
+
+              </div>
+            </li>
+
+          </ul>
+
+        </div>
+      </section>
+  
+
+<!--About us-
+<section class="about" id="about">
+  <div class="about-text">
+    <span>About Us</span>
+    <h2>Introduzione del <br> pluviometro</h2>
+    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Veniam odio voluptate quam commodi repellendus id, 
+      ratione voluptatem est distinctio, dolorum quas. Beatae pariatur voluptatem vel 
+      cupiditate quam reiciendis aspernatur? Neque Lorem ipsum dolor, sit amet consectetur adipisicing elit. Pariatur rem, 
+      ad provident nam eum sunt quisquam possimus obcaecati quaerat id accusantium ullam expedita minus 
+      placeat unde neque tempore consectetur deleniti!.</p>
+      <a href="#" class="button">Scopri di più</a>
+</section>
+
+About us
+<div class="wrapper_1">
+  <div class="sun"></div>
+  <div class="cloud">
+    <div class="cloud1">
+      <ul>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+      </ul>
+    </div>
+    <div class="cloud1 c_shadow">
+      <ul>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="cloud_s">
+    <div class="cloud1">
+      <ul>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+      </ul>
+    </div>
+    <div class="cloud1 c_shadow">
+      <ul>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="cloud_vs">
+    <div class="cloud1">
+      <ul>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+      </ul>
+    </div>
+    <div class="cloud1 c_shadow">
+      <ul>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+      </ul>
+    </div>
+  </div>
+  <div class="haze"></div>
+  <div class="haze_stripe"></div>
+  <div class="haze_stripe"></div>
+  <div class="haze_stripe"></div>
+  <div class="thunder"></div>
+  <div class="rain">
+     <ul>
+       <li></li>
+       <li></li>
+       <li></li>
+    </ul>
+  </div>
+  <div class="sleet">
+     <ul>
+       <li></li>
+       <li></li>
+       <li></li>
+    </ul>
+  </div>
+  <div class="text">
+    <ul>
+      <li>Mostly Sunny</li>
+      <li>Partly Sunny</li>
+      <li>Partly Cloudy</li>
+      <li>Mostly Cloudy</li>
+      <li>Cloudy</li>
+      <li>Hazy</li>
+      <li>Thunderstorm</li>
+      <li>Rain</li>
+      <li>Sleet</li>
+    </ul>
+  </div>
+</div>
+</div>-->
+
+
+
+<!--Footer-->
+<section class="ft-section" id="contact">
+  <div class="footer">
+    <div class="gain">
+      <div class="col">
+        <h4>Menu Links</h4>
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Menu</a></li>
+          <li><a href="#">Service</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>Menu Links</h4>
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Menu</a></li>
+          <li><a href="#">Service</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>Menu Links</h4>
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Menu</a></li>
+          <li><a href="#">Service</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>Contact us</h4>
+        <div class="social">
+          <a href=""><i class='bx bxl-facebook'></i></a>
+          <a href=""><i class='bx bxl-instagram'></i></a>
+          <a href=""><i class='bx bxl-twitter' ></i></a>
+          <a href=""><i class='bx bxl-youtube' ></i></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!--Jquery-->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+<!--Script-->
+<script>
+    ScrollReveal().reveal('.scroll', { distance: '-50px',duration: 1000,easing: 'cubic-bezier(0.215, .61, .355, 1)'});
+    /*ScrollReveal().reveal('.scrollft', { distance: '50px',duration: 1500,easing: 'cubic-bezier(0.215, .61, .355, 1)'});*/
+    ScrollReveal().reveal('.scroll2', { distance: '100px',duration: 1500,easing: 'cubic-bezier(0.215, .61, .355, 1)', inerval:600});
+    ScrollReveal().reveal('.scroll3', { distance: '100px',duration: 2000,easing: 'cubic-bezier(0.215, .61, .355, 1)', inerval:600});
+</script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script><script  src="/climate_change_v4.2/js/scriptnav.js"></script>
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/gsap/1.20.2/TweenMax.min.js'></script><script  src="/climate_change_v4.2/js/scriptslider.js"></script>
+
+<!-- partial -->
+<script src='https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.3.3/gsap.min.js'></script><script  src="/climate_change_v4.2/script.js"></script>
+
+  <!-- 
+    - custom js link
+  -->
+  <script src="/climate_change_v4.2/js/nav.js"></script>
+
+  <!-- 
+    - ionicon link
+  -->
+  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+
+  <script>
+    function goCards() {
+      window.scrollTo(1180,1180)
+    }
+    function goContact(){
+  
+      window.scrollTo(0,5000)
+  
+    }
+  
+    function goAbout(){
+  
+      window.scrollTo(0,2760)
+  
+    }
+  
+    window.onscroll = () => {
+       toggleTopButton();
+      }
+       function scrollToTop(){
+         window.scrollTo({top: 0, behavior: 'smooth'});
+       }
+  
+       function toggleTopButton() {
+         if (document.body.scrollTop > 20 ||
+            document.documentElement.scrollTop > 20) {
+            document.getElementById('back-to-up').classList.remove('d-none');
+         } else {
+            document.getElementById('back-to-up').classList.add('d-none');
+         }
+      }
+    </script>
+
+</body>
+</html>

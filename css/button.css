@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css?family=Montserrat:100,100i,200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,800,800i,900,900i');
+
+.wrapper_btn{
+  font-family: 'Montserrat', sans-serif;
+  margin-left: 1550px;
+  padding: 0px 50px;
+}
+.wrapper_btn .text{
+  font-size: 35px;
+  font-weight: 600;
+}
+.wrapper_btn p{
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.wrapper_btn .btns{
+  text-align: center;
+  display: flex;
+  margin: 30px 0 20px 0;
+}
+.btns a{
+  align-items: center;
+  position: relative;
+  margin: 0 20px;
+  height: 50px;
+  width: 150px;
+  display: block;
+  line-height: 50px;
+  border-radius: 30px;
+  text-decoration: none;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 500;
+
+  letter-spacing: 1px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btns a:last-child{
+  background: linear-gradient(90deg, #0162c8, #55e7fc); /*#a1cfff*/
+}
+.btns a > span{
+  position: absolute;
+  background: #fff;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: ripples 0.6s linear infinite;
+}
+@keyframes ripples {
+  0% {
+    width: 0px;
+    height: 0px;
+    opacity: 0.5;
+  }
+  100% {
+    width: 500px;
+    height: 500px;
+    opacity: 0;
+  }
+}

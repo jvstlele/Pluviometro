@@ -1,0 +1,60 @@
+@import url(https://use.typekit.net/ztx1wfr.css);
+:root {
+  --border-w: 0.25rem;
+  --border-r: 1em;
+  --angle: 130deg;
+}
+
+.button_body {
+  margin-top: -420px;
+  margin-left: 1500px;
+  display: flex;
+  min-height: 100vh;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+  font-family: "objektiv-mk2", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.button {
+  text-decoration: none;
+  font-weight: bold;
+  line-height: 1;
+  grid-column: 1;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  padding: 0.725em 1.25em 0.8em;
+  box-shadow: 0 0.05em 0.5em rgba(97, 56, 216, 0.25), 0 0.15em 0.3em -0.1em rgba(156, 28, 218, 0.25), inset 0 0 0.05em 0.0333em rgba(177, 67, 231, 0.25), inset 0 0.1em 0.2em 0em rgba(177, 67, 231, 0.25), inset 0 0.1em 0.45em rgba(97, 56, 216, 0.25);
+  background: linear-gradient(90deg, #00d2ff 0%, #3a47d5 100%);
+  color: white;
+  transition: color 0.3s, background 0.3s, transform 0.75s, background-position 0.5s, box-shadow 0.5s;
+  will-change: background-position, transform, box-shadow;
+  position: relative;
+  border-radius: var(--border-r);
+
+}
+.button:before, .button:after {
+  content: "";
+  border-radius: inherit;
+  position: absolute;
+  transition: opacity 0.5s, filter 0.5s;
+}
+.button:before {
+  inset: calc(var(--border-w) * -1);
+  
+  mix-blend-mode: hard-light;
+}
+.button:after {
+  inset: 0;
+  border-radius: calc(var(--border-r) - var(--border-w));
+  mix-blend-mode: hard-light;
+}
+.button:after {
+  content: none;
+}
+.button:hover, .button:focus {
+  background-position: calc(100% + 1px) 50%;
+  box-shadow: 0 0.15em 1.5em rgb(3,202,252), 0 0.15em 0.333em -0.1em rgb(50,90,219), inset 0 0.15em 0.3em -0.1em rgba(177, 67, 231, 0), inset 0 0 0.05em 0.0333em rgb(50,90,219), inset 0 0.1em 0.666em rgb(50,90,219);
+}
